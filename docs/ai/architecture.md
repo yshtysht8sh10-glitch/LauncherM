@@ -37,6 +37,8 @@ The recommended initial model is described in `docs/ai/workspace-design.md`. It 
 
 `03_Domain/WorkspaceModels.cs` now contains `Workspace`, `LaunchItem`, `LaunchItemType`, and versioned `WorkspaceDocument`. `04_Infrastructure/WorkspaceRepository.cs` stores `workspaces.json` using the .NET Framework `DataContractJsonSerializer` and migrates legacy `de.txt` only when the JSON file does not exist. `02_Application/LaunchService.cs` owns individual and sequential Workspace launch. `01_UI/WorkspaceWindow.xaml` provides the minimal selection, individual launch, and launch-all UI and is the current startup window.
 
+The v0.1 UI keeps the old LauncherM character: dark gray panels, blue header accents, a gear settings entry point, and the four blue/purple layout blocks. The blocks currently toggle visual opacity only; they are “Legacy Layout Visibility Controls,” reserved for later reconnecting to panel visibility settings. Registered LaunchItems are shown as tiles on the left, with the selected item’s details and actions on the right.
+
 ## Target / Proposed Architecture
 
 Future work may introduce an explicit Workspace and Launch Item model, with generic launch types and optional working directories. This is proposed architecture only; it is not currently implemented.

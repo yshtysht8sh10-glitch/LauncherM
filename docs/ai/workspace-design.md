@@ -6,6 +6,8 @@ This is the design record for the investigation phase. It is not an implementati
 
 The v0.1 implementation now follows this design with a version-1 `workspaces.json`, a legacy read-only migration path, and a single `LaunchService`. The UI intentionally does not yet provide full Workspace/LaunchItem editing; JSON can be edited manually for the first usable workflow.
 
+The current UI integrates the model into the legacy LauncherM interaction pattern: Workspace selection and launch-all are in the blue header, registered items are left-side tiles, and the selected item is shown in a right-side detail panel. The gear and blue layout blocks are retained as legacy UI affordances; the blocks currently provide only an ON/OFF visual state and are not treated as dead UI.
+
 ## Proposed model
 
 ```csharp
