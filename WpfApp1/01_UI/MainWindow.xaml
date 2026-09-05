@@ -1,0 +1,154 @@
+﻿<Window x:Class="LauncherM._01_UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:LauncherM._01_UI"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="630" Width="870" Loaded="MainWindow_Loaded" Closing="MainWindow_Closing">
+    <DockPanel x:Name="dockMain">
+
+        <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+        <!-- メニューバー部 -->
+        <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+        <StackPanel DockPanel.Dock="Top" x:Name="stackMenu" Background="#126598" Height="40" Orientation="Horizontal" Panel.ZIndex="2" >
+            
+            <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+            <!-- 環境設定 -->
+            <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+            <Button x:Name="buttonSettingEnvironment"  HorizontalAlignment="Left" Width="21" Click="buttonSettingEnvironment_Click">
+                <Image VerticalAlignment="Center" />
+            </Button>
+
+            <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+            <!-- 表示設定 -->
+            <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+            <StackPanel Margin="10,0,0,0" >
+                <Button x:Name="buttonDispMenu" Background="#FF126598" Height="10" Click="buttonDispMenu_Click" />
+                <StackPanel Orientation="Horizontal" >
+                    <Button x:Name="buttonDispLauncher00" Background="#FF3B0976" HorizontalAlignment="Left" Width="10" Height="30" Click="buttonDispLauncher00_Click" />
+                    <Button x:Name="buttonDispLauncher01" Background="#FF6E28C1" HorizontalAlignment="Left" Width="10" Height="30" Click="buttonDispLauncher01_Click"/>
+                    <Button x:Name="buttonDispLauncher02" Background="#FF9A63DA" HorizontalAlignment="Left" Width="10" Height="30" Click="buttonDispLauncher02_Click"/>
+                    <Button x:Name="buttonDispLauncher03" Background="#FFB189E0" HorizontalAlignment="Left" Width="10" Height="30" Click="buttonDispLauncher03_Click"/>
+                    <Button x:Name="buttonDispEditElementLink" Background="#658742" HorizontalAlignment="Left" Width="25" Height="30" Click="buttonDispEditElementLink_Click"/>
+                    <Button x:Name="buttonDispEditSpecial" Background="#351211" HorizontalAlignment="Left" Width="25" Height="30" Click="buttonDispEditSpecial_Click"/>
+                </StackPanel>
+            </StackPanel>
+
+        </StackPanel>
+
+        
+        <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+        <!-- 横仕切 -->
+        <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+        <StackPanel DockPanel.Dock="Top" x:Name="stackPartitionHorizontal" Height="5"  Panel.ZIndex="2" />
+
+            
+        <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+        <!-- 本体部 -->
+        <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+        <DockPanel x:Name="dockBody" Grid.Row="1" Background="#126598" Panel.ZIndex="1" >
+
+            <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+            <!-- ランチャー部 -->
+            <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+            <StackPanel DockPanel.Dock="Left"  x:Name="stackLauncher" Background="#FF240E3E" HorizontalAlignment="Left" Orientation="Horizontal" >
+                
+                <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+                <!-- ランチャー00部 -->
+                <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+                <StackPanel x:Name="stackLauncher00" Tag="0" Background="#FF3B0976" MouseWheel="stackLauncher_MouseWheel" Width="80">
+
+                    <!-- 初期配置のリンク要素 -->
+                    <Button x:Name="buttonElementLinkInit" Height="62" Width="63" Margin="0,10,0,0" VerticalAlignment="Top" Tag="0" Click="buttonElementLink_Click" MouseDown="buttonElementLinkInit_MouseDown" MouseMove="buttonElementLinkInit_MouseMove" MouseUp="buttonElementLinkInit_MouseUp">
+                        <StackPanel>
+                            <Image x:Name="imageButtonSelectFileInit" VerticalAlignment="Center" />
+                            <TextBlock x:Name="textblockSelectFileInit" Text="□□□" />
+                        </StackPanel>
+                    </Button>
+
+                </StackPanel>
+
+                <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+                <!-- ランチャー01部 -->
+                <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+                <StackPanel x:Name="stackLauncher01" Tag="1" Background="#FF6E28C1" MouseWheel="stackLauncher_MouseWheel" Width="80">
+                </StackPanel>
+
+                <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+                <!-- ランチャー02部 -->
+                <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+                <StackPanel x:Name="stackLauncher02" Tag="2" Background="#FF9A63DA" MouseWheel="stackLauncher_MouseWheel" Width="80">
+                </StackPanel>
+
+                <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+                <!-- ランチャー03部 -->
+                <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+                <StackPanel x:Name="stackLauncher03" Tag="3" Background="#FFB189E0" MouseWheel="stackLauncher_MouseWheel" Width="80">
+                </StackPanel>
+            </StackPanel>
+            
+            <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+            <!-- 縦仕切 壱 -->
+            <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+            <StackPanel x:Name="stackPartitionVertical01" Width="5" Background="White" />
+
+            <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+            <!-- リンク要素編集部 -->
+            <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+            <StackPanel DockPanel.Dock="Left" x:Name="stackEditElementLink" Background="#658742">
+
+                <!-- メインイメージ表示欄 -->
+                <Button x:Name="buttonMainImage"  HorizontalAlignment="Left" Height="143" Margin="5,5,0,0" VerticalAlignment="Top" Width="290" Click="buttonMainImage_Click">
+                    <Image VerticalAlignment="Center" />
+                </Button>
+
+                <!-- タイトル表示欄 -->
+                <TextBox x:Name="textboxTitle" Text="□□□□□□" HorizontalAlignment="Left" Margin="5,5,0,0" TextWrapping="Wrap" VerticalAlignment="Top" TextChanged="textboxTitle_TextChanged"/>
+
+                <!-- メモ欄 -->
+                <TextBox x:Name="textMemo" Height="150" Margin="10,5,10,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" TextChanged="textMemo_TextChanged"/>
+
+                <!-- Select.def選択コンボボックス -->
+                <!-- <ComboBox x:Name="comboboxSelectSelectDef" HorizontalAlignment="Left" Height="27" Margin="5,5,0,0" VerticalAlignment="Top" Width="213"/> -->
+
+                <!-- リンク欄 -->
+                <StackPanel Orientation="Horizontal" >
+                    <Button x:Name="buttonLink" Height="36" Margin="5,5,0,0" VerticalAlignment="Top" Width="36" Click="buttonLink_Click">
+                        <Image VerticalAlignment="Center" />
+                    </Button>
+                    <TextBlock x:Name="textblockFullPath" Text="□□□□□□□□□□" TextWrapping="Wrap" Margin="0" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- 起動ボタン -->
+                <Button x:Name="buttonStarting" Content="Play" HorizontalAlignment="Left" Height="65" Margin="0,5,5,0" VerticalAlignment="Top" Width="61" RenderTransformOrigin="0.492,0.415" Click="buttonStarting_Click"/>
+
+                <!-- ファイルの場所を開くボタン -->
+                <Button x:Name="buttonOpenFolder" Content="folda" HorizontalAlignment="Left" Height="26" Margin="0,5,5,0" VerticalAlignment="Top" Width="61" RenderTransformOrigin="0.492,0.415" Click="buttonOpenFolder_Click"/>
+
+            </StackPanel>
+
+            <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+            <!-- 縦仕切 弐 -->
+            <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+            <StackPanel x:Name="stackPartitionVertical02" Width="5" Background="White" />
+
+            <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+            <!-- 特別編集部 -->
+            <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+
+            <StackPanel DockPanel.Dock="Left" x:Name="stackEditSpecial" Background="#351211">
+                <Button x:Name="button_Copy" Content="OpenChar" HorizontalAlignment="Left" Height="27" Margin="236,4,0,0" VerticalAlignment="Top" Width="73"/>
+                <TextBlock x:Name="textBlock" HorizontalAlignment="Left" Height="303" Margin="10,36,0,0" TextWrapping="Wrap" Text="TextBlock" VerticalAlignment="Top" Width="171" Background="White"/>
+                <TextBlock x:Name="textBlock_Copy" HorizontalAlignment="Left" Height="303" Margin="236,36,0,0" TextWrapping="Wrap" Text="TextBlock" VerticalAlignment="Top" Width="171" Background="White"/>
+                <Button x:Name="button1" Content="←" HorizontalAlignment="Left" Height="67" Margin="205,148,0,0" VerticalAlignment="Top" Width="26"/>
+                <RadioButton x:Name="radioButton" Content="Setting Char And Stage" HorizontalAlignment="Left" Margin="428,230,0,0" VerticalAlignment="Top"/>
+                <RadioButton x:Name="radioButton_Copy" Content="Setting Sound in Stage" HorizontalAlignment="Left" Margin="428,250,0,0" VerticalAlignment="Top"/>
+                <RadioButton x:Name="radioButton_Copy1" Content="Do nothing" HorizontalAlignment="Left" Margin="428,270,0,0" VerticalAlignment="Top"/>
+            </StackPanel>
+
+            
+        </DockPanel>
+
+    </DockPanel>
+</Window>
