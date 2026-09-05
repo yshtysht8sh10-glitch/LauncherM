@@ -44,3 +44,7 @@ Workspace / Group は複数の Launch Item を持つ作業単位の概念です�
 ## MUGEN Extension
 
 MUGEN固有機能は将来の拡張として、汎用Launcher Coreと分離します。MUGENを知らないユーザーでも通常のWindowsランチャーとして利用できることを維持します。
+
+## Time to Usable
+
+LauncherMは複数の個人開発や作業環境を高速に切り替えるための基盤です。GUIの完成度や枝葉の機能より、実際の作業で利用可能になるまでの時間を優先します。拡張性は維持しますが、将来機能を先回りして実装しません。

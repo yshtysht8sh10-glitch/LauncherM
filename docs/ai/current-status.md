@@ -11,6 +11,21 @@ Last updated: 2026-09-05
 - Icon loading from executable paths
 - Settings and saved data text-file handling
 
+## Investigation Completed
+
+- Confirmed the four launcher areas are fixed XAML `StackPanel`s with code-side lists indexed by launcher number and display order.
+- Confirmed the current item record and the Shift-JIS colon-delimited `de.txt` / symbolic `se.txt` persistence formats.
+- Confirmed there is no ID, type, arguments, working directory, or schema version in the current data.
+- Documented a four-Workspace legacy mapping and a separate, backup-preserving migration strategy.
+- Documented the recommended generic LaunchItem model and launch responsibilities in `docs/ai/workspace-design.md`.
+
+## Implemented (v0.1)
+
+- Added Workspace/LaunchItem/LaunchItemType domain models.
+- Added versioned `workspaces.json` persistence and read-only `de.txt` migration into four Workspaces.
+- Added `LaunchService` for Application, Folder, File, URL, and persistent Command (`cmd.exe /k`) launch.
+- Added minimal Workspace selection, individual launch, and “すべて起動” UI as the startup window.
+
 ## Verified
 
 - Visual Studio 2022 MSBuild Rebuild succeeds with 0 errors for Debug.
@@ -24,12 +39,27 @@ Last updated: 2026-09-05
 - Reliable batch launch
 - URL and command item support
 - Better persistence model
+- Add read-only Workspace/LaunchItem classes and a legacy `de.txt` mapping adapter with focused checks; do not change the UI or persistence cutover in that step.
+
+## Open Decisions
+
+- Preservation format for legacy `PathFileSelect` and `PathImagevisual` data.
+- Versioned new persistence format and exact backup/rollback behavior.
+- Command quoting/lifetime/error policy and batch-launch failure semantics.
+
+## Verified
+
+- Visual Studio 2022 MSBuild Debug Build succeeds with 0 errors; existing unused-field warnings remain.
+- The new startup XAML and all new model/repository/service files compile into `LauncherM/bin/Debug/LauncherM.exe`.
+
+## Not Yet Verified
+
+- GUI startup, external Application/Folder/URL/Command launches, JSON restart loading, and legacy migration with a real user `de.txt` were not executed end-to-end in this pass.
 
 These items are not implemented by this restart task.
 
 ## Known Issues
 
-- Legacy and newer source layouts coexist in `LauncherM` and `WpfApp1`; only the former is the active solution project.
 - Some source contains legacy absolute paths such as `F:\作業用\...`; these are environment-specific and must not be treated as portable behavior.
 - Runtime behavior for every launch type and saved-data migration has not been comprehensively verified.
 - The build emits unused-field warnings.
