@@ -39,6 +39,8 @@ The recommended initial model is described in `docs/ai/workspace-design.md`. It 
 
 The v0.1 UI keeps the old LauncherM character: dark gray panels, blue header accents, a gear settings entry point, and the four blue/purple layout blocks. The blocks currently toggle visual opacity only; they are “Legacy Layout Visibility Controls,” reserved for later reconnecting to panel visibility settings. Registered LaunchItems are shown as tiles on the left, with the selected item’s details and actions on the right.
 
+The UI was tuned against the legacy reference image: gray header rather than blue fill, near-black content panes, gray outlined controls, bright blue selection/icon accents, and a fixed left/right split. The header also includes add/edit/menu affordances; add/edit remain placeholders until their data-entry flows are implemented.
+
 ## Target / Proposed Architecture
 
 Future work may introduce an explicit Workspace and Launch Item model, with generic launch types and optional working directories. This is proposed architecture only; it is not currently implemented.

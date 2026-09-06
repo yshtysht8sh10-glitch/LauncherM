@@ -53,11 +53,13 @@ Last updated: 2026-09-05
 - Visual Studio 2022 MSBuild Debug Build succeeds with 0 errors; existing unused-field warnings remain.
 - The new startup XAML and all new model/repository/service files compile into `LauncherM/bin/Debug/LauncherM.exe`.
 - The UI Build succeeds with the legacy-inspired Workspace window as the startup resource.
+- The Workspace window was visually tuned toward the legacy reference: gray header, dark panels, outlined gray controls, blue selection accents, tile layout, and right-side detail card.
 
 ## Not Yet Verified
 
 - GUI startup, external Application/Folder/URL/Command launches, JSON restart loading, and legacy migration with a real user `de.txt` were not executed end-to-end in this pass.
 - The gear currently opens the existing settings window with a temporary settings object; persistence of those settings from the new window is not yet integrated.
+- The reference image was used for visual comparison, but pixel-level visual QA of the running WPF window remains pending.
 
 These items are not implemented by this restart task.
 
