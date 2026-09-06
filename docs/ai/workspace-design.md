@@ -26,6 +26,8 @@ sealed class LaunchItem {
     public string Target { get; set; }
     public string Arguments { get; set; }
     public string WorkingDirectory { get; set; }
+    public string Browser { get; set; }       // Url only; optional, defaults to Default
+    public string BrowserProfile { get; set; } // Url only; optional browser profile name
     public string IconPath { get; set; }
     public string Memo { get; set; }
 }

@@ -26,6 +26,12 @@ Last updated: 2026-09-05
 - Added `LaunchService` for Application, Folder, File, URL, and persistent Command (`cmd.exe /k`) launch.
 - Added minimal Workspace selection, individual launch, and “すべて起動” UI as the startup window.
 - Restored the legacy-inspired dark/blue layout: header gear, blue layout blocks, left-side item tiles, and right-side selected-item details.
+- Added drag-and-drop registration to the left item area: dropped Windows files, folders, executables, and `.lnk` shortcuts are added to the selected Workspace and saved to `workspaces.json`.
+- Added Windows-associated icons for registered files and folders in both item tiles and the selected-item detail area.
+- Added multi-selection and deletion for LaunchItem cards: active cards are highlighted, Ctrl-click toggles selection, mouse dragging across cards adds them to the selection, and Delete/right-click can remove the selected cards.
+- Added Workspace management from the header menu: create, rename, delete, and toggle display of all Workspaces' LaunchItems.
+- Added LaunchItem add/edit dialogs for name, type, target, and arguments; changes are persisted to `workspaces.json`.
+- URL LaunchItems now support optional browser and browser-profile settings. Chrome/Edge use `--profile-directory`, Firefox uses `-P`, and Default preserves OS browser launching.
 
 ## Verified
 
