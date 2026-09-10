@@ -37,6 +37,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="04_Infrastructure\BrowserProfiles.cs" />
+    <Compile Include="04_Infrastructure\WebsiteIconCache.cs" />
     <Compile Include="03_Domain\WorkspaceModels.cs" />
     <Compile Include="04_Infrastructure\WorkspaceRepository.cs" />
     <Compile Include="02_Application\LaunchService.cs" />

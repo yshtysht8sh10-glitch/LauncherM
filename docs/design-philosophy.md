@@ -48,3 +48,10 @@ MUGEN固有機能は将来の拡張として、汎用Launcher Coreと分離し�
 ## Time to Usable
 
 LauncherMは複数の個人開発や作業環境を高速に切り替えるための基盤です。GUIの完成度や枝葉の機能より、実際の作業で利用可能になるまでの時間を優先します。拡張性は維持しますが、将来機能を先回りして実装しません。
+
+## Browser environments
+
+Browser Context (browser and profile) selects a preconfigured working environment.
+Browser Window Groups describe tabs to open together when launching a Workspace.
+LauncherM does not manage web-service login state or store passwords, cookies,
+session/OAuth tokens. Authentication belongs to browsers and web services.

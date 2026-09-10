@@ -84,3 +84,41 @@ These items are not implemented by this restart task.
 ## Next Investigation
 
 Confirm persistence format and launch behavior on a clean machine, then decide whether the current data model can be incrementally adapted to Workspace / Launch Item concepts.
+
+## Browser Workspace extension (2026-09-09)
+
+Implemented: URL editor detects Chrome/Edge profile names from the standard user-data
+`Local State` file's `profile.info_cache`; only display name and directory identifiers
+are used. The selected directory is stored in BrowserProfile, not the display name.
+Manual profile entry remains available. BrowserWindowGroup is an optional version-1
+JSON member. Explicit Chrome/Edge groups launch once per browser/profile/group with
+`--new-window` and multiple URLs. Empty groups retain individual launching. Default
+and Firefox do not support window grouping. Workspace defaults are deferred.
+
+Verified: Debug and Release configuration builds; 12 focused checks including grouping,
+failure continuation, old JSON, serialization and actual profile metadata detection.
+Both browsers accepted real launch commands and additional windows appeared; exact
+A/B tab placement and C separation remain NOT VERIFIED because Computer Use stopped.
+Cold starts, GUI save/restart, and distinct-profile window identity remain unverified.
+
+2026-09-09 Chrome-not-found fix: reproduced in an x86 process: both ProgramFiles and
+ProgramFilesX86 resolve to Program Files (x86), while installed Chrome is in Program
+Files. Added App Paths lookup in both registry views plus ProgramW6432 fallback.
+All 12 checks pass when compiled x86. Release fix built and the normal bin/Release executable updated after LauncherM closed.
+
+No credentials, cookies, tokens, login automation, CDP, browser extensions or browser
+UI automation are part of the product. Authentication remains in browser profiles.
+
+## URL icons (2026-09-09)
+
+Implemented: URL LaunchItems with no explicit IconPath fetch and cache the site's
+favicon under `%LOCALAPPDATA%\LauncherM\WebsiteIcons`. LauncherM first requests the
+site's conventional `/favicon.ico`; if the site refuses that request, it falls back
+to Google's favicon service. Existing URL items are filled after startup without
+blocking the window, and new/edited/dropped URLs are filled before saving. The edit
+dialog exposes an icon path and file picker for ICO, PNG, JPEG, BMP, GIF, EXE and LNK.
+Raster image files are rendered directly instead of showing their Windows file-type
+icon. The existing right-click `アイコンを変更` action remains available.
+
+Verified: Debug build succeeds. An x86 focused check downloaded the ChatGPT favicon,
+validated it through WPF's image decoder, and confirmed same-origin cache reuse.

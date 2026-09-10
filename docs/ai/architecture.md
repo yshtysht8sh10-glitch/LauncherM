@@ -48,3 +48,18 @@ Future work may introduce an explicit Workspace and Launch Item model, with gene
 ## Reusable Areas
 
 The existing item data, settings persistence, WPF layout, individual launch handlers, and icon loading are useful starting points. They should be preserved until their behavior is understood.
+
+## Browser Workspace extension (2026-09-09)
+
+See workspace-design.md for Browser Context and BrowserWindowGroup semantics and
+current-status.md for verification. LaunchService groups explicit Chrome/Edge window
+requests, retains per-item failure reporting, and uses ordinary browser CLI arguments.
+BrowserProfiles reads friendly profile metadata; persistence keeps directory IDs.
+No authentication or browser session control is introduced. App Paths is searched in
+both registry views so an x86 launcher can discover a 64-bit browser.
+
+URL favicon retrieval is isolated in `04_Infrastructure/WebsiteIconCache.cs`. Cached
+files live in LocalApplicationData, while `LaunchItem.IconPath` continues to represent
+both automatic cache files and user-selected local icon/image files. The UI loads
+raster files directly and uses the existing Windows associated-icon path for executable,
+shortcut, file, and folder icons.

@@ -68,3 +68,25 @@ The right-hand detail panel can become LaunchItem editing with limited changes; 
 ## Smallest next implementation step
 
 Add read-only domain classes plus a legacy `de.txt` adapter and unit-level mapping checks, without changing the UI or writing new data. This proves the four-Workspace conversion and exposes data-loss cases before any persistence cutover.
+
+## Browser Context and Window Groups
+
+Browser Context consists of Browser and BrowserProfile (a stable directory identifier
+for Chrome/Edge; a profile name for Firefox). BrowserProfiles reads only profile-name
+metadata from standard Local State, with manual fallback. The UI displays friendly
+names with directory suffixes to distinguish duplicate names.
+
+BrowserWindowGroup is an optional LaunchItem field added without changing version 1.
+Within a Workspace, an explicit group name plus browser/profile identifies one new
+window. URLs in that group are tabs passed in one command. Different groups launch
+separate --new-window commands. Individual launches and unspecified groups retain
+existing behavior. Groups are launch-time instructions, not handles to existing
+windows, and do not mean browser-native colored tab groups. Default/Firefox grouping
+is unsupported; the editor disables it and the service falls back to individual URLs.
+Browser discovery checks both App Paths registry views and 64/32-bit install roots.
+
+The product never manages web login state, passwords, cookies, sessions or OAuth.
+Users prepare logged-in profiles in their browsers. Nonstandard user-data roots,
+portable/browser-channel installations and profile deletion are not automatically
+managed. Browser startup settings/policies may affect the resulting windows; exact
+runtime grouping remains unverified. Workspace default browser inheritance is deferred.

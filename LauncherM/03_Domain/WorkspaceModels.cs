@@ -17,7 +17,9 @@ namespace LauncherM.Domain
         [DataMember(Order = 6)] public string WorkingDirectory { get; set; }
         [DataMember(Order = 7)] public string Browser { get; set; }
         [DataMember(Order = 8)] public string BrowserProfile { get; set; }
-        public LaunchItem() { Id = Guid.NewGuid(); Name = ""; Target = ""; Arguments = ""; WorkingDirectory = ""; Browser = "Default"; BrowserProfile = ""; }
+        [DataMember(Order = 9)] public string IconPath { get; set; }
+        [DataMember(Order = 10, EmitDefaultValue = false)] public string BrowserWindowGroup { get; set; }
+        public LaunchItem() { Id = Guid.NewGuid(); Name = ""; Target = ""; Arguments = ""; WorkingDirectory = ""; Browser = "Default"; BrowserProfile = ""; IconPath = ""; }
     }
 
     [DataContract]
