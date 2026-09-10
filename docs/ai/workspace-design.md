@@ -1,92 +1,53 @@
-# Workspace / LaunchItem Design Investigation
+# Workspace / LaunchItem Design
 
-## Status
+## 作業環境と構成要素
 
-This is the design record for the investigation phase. It is not an implementation specification yet.
+Workspaceは「作業環境」の単位で、複数のLaunchItemを持ちます。
+LaunchItemはTarget（何を）・Opener（何で）・Destination（どこに）の組合せです。
+各要素は独立したContextを持てる設計思想とし、既存の平坦なモデルを維持します。
+現在はWorkspace管理・LaunchItem編集・個別起動・すべて起動を実装済みです。
 
-The v0.1 implementation now follows this design with a version-1 `workspaces.json`, a legacy read-only migration path, and a single `LaunchService`. The UI intentionally does not yet provide full Workspace/LaunchItem editing; JSON can be edited manually for the first usable workflow.
+## WebMUGEN Workspaceの例
 
-The current UI integrates the model into the legacy LauncherM interaction pattern: Workspace selection and launch-all are in the blue header, registered items are left-side tiles, and the selected item is shown in a right-side detail panel. The gear and blue layout blocks are retained as legacy UI affordances; the blocks currently provide only an ON/OFF visual state and are not treated as dead UI.
+以下は構成例であり、プリセットの追加や端末上の配置確認を意味しません。
 
-## Proposed model
+| 要素 | Target | Opener / Context | Destination / Context | 現在の表現 |
+| --- | --- | --- | --- | --- |
+| VS Code | D:\WebMUGEN\WebMUGEN.code-workspace | VS Code | アプリ任せ | FileではOS関連付け。明示VS Code起動はApplicationでCode.exeとArgumentsにworkspaceパスを指定する回避策。Fileの任意Opener選択は未実装 |
+| GitHub | リポジトリURL | Chrome / 個人開発Profile | Browser Window / Main | Url + Browser + BrowserProfile + BrowserWindowGroup |
+| ChatGPT | https://chatgpt.com | Chrome / 個人開発Profile | Browser Window / Main | 同上。Target Context「個人Googleアカウント」は思想のみで、保存・強制しない |
+| Local Server | プロジェクト内のサーバー起動コマンド | cmd.exe /k | OS任せのコンソール | Command + Target + Arguments。WorkingDirectoryはCommandでは未適用。必要ならコマンド自身で明示的に作業先を設定 |
+| Explorer | D:\WebMUGEN | Explorer | OS / Explorer任せ | Folder + Target。Explorer Group / Tab指定は未実装 |
 
-```csharp
-enum LaunchItemType { Application, Folder, File, Url, Command }
+同じWorkspaceでも各LaunchItemのOpener・Context・Destinationは独立します。
+Workspaceに共通Userを持たせず、Browser/ProfileのWorkspace既定値継承も現在はありません。
 
-sealed class Workspace {
-    public Guid Id { get; set; }
-    public string Name { get; set; }
-    public List<LaunchItem> LaunchItems { get; set; }
-}
+## Browser Windowの現在の動作
 
-sealed class LaunchItem {
-    public Guid Id { get; set; }
-    public string Name { get; set; }
-    public LaunchItemType Type { get; set; }
-    public string Target { get; set; }
-    public string Arguments { get; set; }
-    public string WorkingDirectory { get; set; }
-    public string Browser { get; set; }       // Url only; optional, defaults to Default
-    public string BrowserProfile { get; set; } // Url only; optional browser profile name
-    public string IconPath { get; set; }
-    public string Memo { get; set; }
-}
-```
+一括起動では同一WorkspaceのBrowser・BrowserProfile・BrowserWindowGroupが一致するChrome/Edge URLを、1回の`--new-window`コマンドの複数タブとして渡します。
+Group名は前後空白を除いて比較し、大文字小文字を区別。Profileも区別します。Browser名は区別しません。
+未指定Group・Default・Firefoxは個別起動。個別起動ボタンではGroupを使わず、ProfileとURLを通常のCLIで渡します。
+グループ名は既存ウィンドウの参照でも、ブラウザネイティブの色付きTab Groupでもありません。
+実際の配置はブラウザ設定・既存プロセス・ポリシーにも依存し、CLIの送信成功だけで配置確認済みとは扱いません。
+グループ単位の失敗は各項目へ報告し、後続の起動を継続します。
 
-`Workspace` owns grouping; `LaunchItem` is the user-facing common concept. `Target` is intentionally generic. `Arguments` and `WorkingDirectory` cover VS Code, browsers, and most command-line tools without product-specific classes. `IconPath` and `Memo` preserve useful existing UI data. `Order` should be added when ordering is actually implemented, not preemptively.
+## Contextの境界
 
-## Existing-to-new mapping
+Browser ProfileはOpener Context。Chrome/Edgeは表示名ではなくDirectory IDを保存し、FirefoxはProfile名を保存します。
+ChatGPT Account等のTarget Identityとは別概念です。認証状態はブラウザとサービスに任せ、Password、Cookie、Tokenを保存・操作しません。
+Target Contextは必要に応じて期待メタ情報になり得ますが、現在はフィールドも編集UIもありません。
+WorkingDirectoryはOpenerの実行Contextで、配置先ではありません。現行実装ではApplicationのみで使用、GUIでは読み取り専用です。
+Destination ContextのExplorer Group、Monitor位置、Virtual EnvironmentやLinux Userは未実装の拡張概念です。
 
-Generate four Workspaces (`Launcher 1` through `Launcher 4`) from legacy launcher numbers 0 through 3. Map `StringTitle` to `Name`, `PathExe` to `Target`, `PathImageIcon` to `IconPath`, and `StringMemo` to `Memo`. The legacy `OrderDisplayInLuncher` becomes the list order during conversion. `PathImagevisual` and `PathFileSelect` have no generic meaning yet; preserve them in a migration extension/metadata field or leave them in the legacy record until their use is explicitly designed. Do not silently discard them.
+## 保存と互換性
 
-## Launch strategy on .NET Framework 4.8
+WorkspaceDocument Version 1と既存LaunchItemのDataMemberを維持します。概念別オブジェクトへのJSON移行は行いません。
+旧JSONのBrowser / BrowserProfile / BrowserWindowGroup欠落を許容し、OS既定起動を維持します。
+de.txtからの移行は読み取り専用で元ファイルを保持しますが、移行対象はタイトル・Target・所属のみであり、旧メタ情報の完全移行ではありません。
+詳細な現行対応表は[architecture.md](architecture.md)、検証範囲と既知の制約は[current-status.md](current-status.md)を参照してください。
 
-- Application: `ProcessStartInfo` with the executable as `FileName`, optional `Arguments`, and explicit `WorkingDirectory` when supplied.
-- Folder: `explorer.exe` with the folder path, after existence validation.
-- File: `ProcessStartInfo` with `UseShellExecute = true` so Windows selects the associated application.
-- URL: `ProcessStartInfo` with `UseShellExecute = true`.
-- Command: initially use `cmd.exe /c` with a carefully constructed argument and `WorkingDirectory`; use `/k` only when the user explicitly wants a persistent console. Keep `CreateNoWindow` and shell behavior as policy, not item-specific string hacks. Quoting and error reporting must be tested before implementation.
+## 未実装の方向
 
-The UI should call a small `LaunchService` (or equivalent application-level collaborator). `Workspace` should own item membership, not call `Process.Start` itself. A separate service is justified once batch launch exists; until then, a minimal service wrapping the existing handlers is sufficient. The View should not loop over `Process.Start` directly.
-
-## Migration and safety
-
-Automatic migration is feasible because launcher number and display order are explicit. It is not lossless for the MUGEN-oriented `PathFileSelect` and visual-image semantics unless those are preserved as legacy metadata. Keep `de.txt` and `se.txt` readable during a transition, write a versioned new file separately, create a timestamped backup before conversion, and never overwrite valid data after a parse error. On malformed input, retain the original file, report the affected line, and allow the application to continue with the last valid/empty in-memory state only by explicit policy.
-
-## UI reuse
-
-The right-hand detail panel can become LaunchItem editing with limited changes; the existing title, memo, image, target selection, Play, and folder-open concepts are reusable. The four fixed panels can initially be treated as four generated Workspaces, then replaced by a Workspace list when the model is proven. Add “Launch all” at the Workspace header/selection level. Full WPF binding/ViewModel conversion is not required for the first slice.
-
-## Risks and decisions still open
-
-- Current save files are relative to the process working directory, have no version, and use fragile colon parsing.
-- Absolute target and image paths may not exist on another machine.
-- Existing code has MUGEN-specific fields mixed into the generic item record; they must not leak into Launcher Core.
-- Shell quoting, command lifetime, and failure reporting need focused tests.
-- Whether `PathFileSelect` is retained as extension metadata or migrated into a future MUGEN extension remains undecided.
-
-## Smallest next implementation step
-
-Add read-only domain classes plus a legacy `de.txt` adapter and unit-level mapping checks, without changing the UI or writing new data. This proves the four-Workspace conversion and exposes data-loss cases before any persistence cutover.
-
-## Browser Context and Window Groups
-
-Browser Context consists of Browser and BrowserProfile (a stable directory identifier
-for Chrome/Edge; a profile name for Firefox). BrowserProfiles reads only profile-name
-metadata from standard Local State, with manual fallback. The UI displays friendly
-names with directory suffixes to distinguish duplicate names.
-
-BrowserWindowGroup is an optional LaunchItem field added without changing version 1.
-Within a Workspace, an explicit group name plus browser/profile identifies one new
-window. URLs in that group are tabs passed in one command. Different groups launch
-separate --new-window commands. Individual launches and unspecified groups retain
-existing behavior. Groups are launch-time instructions, not handles to existing
-windows, and do not mean browser-native colored tab groups. Default/Firefox grouping
-is unsupported; the editor disables it and the service falls back to individual URLs.
-Browser discovery checks both App Paths registry views and 64/32-bit install roots.
-
-The product never manages web login state, passwords, cookies, sessions or OAuth.
-Users prepare logged-in profiles in their browsers. Nonstandard user-data roots,
-portable/browser-channel installations and profile deletion are not automatically
-managed. Browser startup settings/policies may affect the resulting windows; exact
-runtime grouping remains unverified. Workspace default browser inheritance is deferred.
+Planned：任意Opener、Explorer Tab、Monitor座標指定の検討。
+Future：Target Contextの保存、サービス固有Adapter、仮想デスクトップ、WSL / VM / Remote等。
+新しいPlugin SystemやWorkflow Engineを導入せず、必要になった機能から小さく実装します。

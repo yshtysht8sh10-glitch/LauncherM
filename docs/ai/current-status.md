@@ -1,124 +1,73 @@
 # Current Status
 
-Last updated: 2026-09-05
+Last updated: 2026-09-10
 
 ## Implemented
 
-- WPF launcher prototype
-- Four launcher display areas and an item detail area
-- Item registration/editing/deletion flow in the existing UI
-- Individual launch and folder-open handlers
-- Icon loading from executable paths
-- Settings and saved data text-file handling
+- .NET Framework 4.8 / WPF。起動画面は`01_UI/WorkspaceWindow.xaml`。
+- Workspace / LaunchItem / WorkspaceDocumentとVersion 1の`workspaces.json`。
+- Workspace作成・名前変更・削除・全Workspace一覧、LaunchItem追加・編集・削除・複数選択・ドラッグ＆ドロップ登録。
+- Application / Folder / File / URL / Commandの個別起動とWorkspace一括起動。Commandはcmd.exe /k。
+- Target編集、Application / Commandの引数編集。WorkingDirectoryは保存・読み取り専用表示、実行への適用はApplicationのみ。
+- URLのBrowser選択（Default / Chrome / Edge / Firefox）、Browser Profile指定。Chrome/Edge候補はLocal Stateの表示名とDirectoryを使用し、Directory IDを保存。FirefoxはProfile名。手入力可。
+- Chrome/EdgeのBrowser Window Group。一括起動時にBrowser・Profile・Groupごとの新規ウィンドウCLIを構成。個別起動・未指定Groupは通常起動。Default / FirefoxのGroupは未対応。
+- 両Registry ViewのApp Pathsと64/32-bitインストールパスによるブラウザ検出。
+- URL favicon取得・LocalApplicationDataへのキャッシュ、手動IconPath、画像表示。favicon.ico取得失敗時はGoogle favicon serviceへフォールバックする既存動作。
+- 今回：詳細ペイン・編集ダイアログを「何を開く？ / Target」「何で開く？ / Opener」「どこに開く？ / Destination」に整理。Browser ProfileとWindow Groupを分離し、選択内容による条件表示を実装。
+- 今回：灰色Header・歯車・青ブロック・ダークな左右ペイン・Workspace選択・すべて起動を維持。編集ダイアログにも既存の配色を適用しスクロール可能にした。
 
-## Investigation Completed
+## 設計思想のみ（保存・実行機能ではない）
 
-- Confirmed the four launcher areas are fixed XAML `StackPanel`s with code-side lists indexed by launcher number and display order.
-- Confirmed the current item record and the Shift-JIS colon-delimited `de.txt` / symbolic `se.txt` persistence formats.
-- Confirmed there is no ID, type, arguments, working directory, or schema version in the current data.
-- Documented a four-Workspace legacy mapping and a separate, backup-preserving migration strategy.
-- Documented the recommended generic LaunchItem model and launch responsibilities in `docs/ai/workspace-design.md`.
+- LaunchItemは独立したTarget / Opener / Destinationで考え、Workspaceはその集合として作業環境を表す。
+- 各要素に独立Contextを持てる。Target IdentityとOpener Identityを共通Userへまとめない。
+- Target Contextを持てても実行を強制できるとは限らず、期待メタ情報になり得る。現時点でTarget Contextの保存・編集フィールドはない。
+- Password / Cookie / Session / OAuth Token管理と自動ログインは製品の対象外。ブラウザ・サービスへ委ねる。
 
-## Implemented (v0.1)
+## Planned（未実装・次期検討対象、時期未確定）
 
-- Added Workspace/LaunchItem/LaunchItemType domain models.
-- Added versioned `workspaces.json` persistence and read-only `de.txt` migration into four Workspaces.
-- Added `LaunchService` for Application, Folder, File, URL, and persistent Command (`cmd.exe /k`) launch.
-- Added minimal Workspace selection, individual launch, and “すべて起動” UI as the startup window.
-- Restored the legacy-inspired dark/blue layout: header gear, blue layout blocks, left-side item tiles, and right-side selected-item details.
-- Added drag-and-drop registration to the left item area: dropped Windows files, folders, executables, and `.lnk` shortcuts are added to the selected Workspace and saved to `workspaces.json`.
-- Added Windows-associated icons for registered files and folders in both item tiles and the selected-item detail area.
-- Added multi-selection and deletion for LaunchItem cards: active cards are highlighted, Ctrl-click toggles selection, mouse dragging across cards adds them to the selection, and Delete/right-click can remove the selected cards.
-- Added Workspace management from the header menu: create, rename, delete, and toggle display of all Workspaces' LaunchItems.
-- Added LaunchItem add/edit dialogs for name, type, target, and arguments; changes are persisted to `workspaces.json`.
-- URL LaunchItems now support optional browser and browser-profile settings. Chrome/Edge use `--profile-directory`, Firefox uses `-P`, and Default preserves OS browser launching.
+- URL以外の任意Opener選択。
+- Explorer Tab destination。
+- Monitor / 座標指定。
 
-## Verified
+## Future（未実装・将来候補）
 
-- Visual Studio 2022 MSBuild Rebuild succeeds with 0 errors for Debug.
-- Output: `LauncherM/bin/Debug/LauncherM.exe`
-- Startup resource path was corrected to `01_UI/0010_MainWindow.xaml`.
+- Target Contextメタ情報の保持とService-specific Target Identity Adapter。
+- Destination Context拡張、Window位置・サイズ復元、仮想デスクトップ。
+- WSL / VM / Remote Environment、Linux User等の実行環境Context。
+- Workspace既定Browser/Profile継承、Delay、Ready待ち、Workspace終了等。
 
-## Planned
+Plugin System、Generic Context Framework、Workflow Engineは導入していません。
 
-- Explicit Workspace / Group model
-- Generic Launch Item types
-- Reliable batch launch
-- URL and command item support
-- Better persistence model
-- Add read-only Workspace/LaunchItem classes and a legacy `de.txt` mapping adapter with focused checks; do not change the UI or persistence cutover in that step.
+## Verified：今回（2026-09-10）
 
-## Open Decisions
+- Visual Studio 2022 Community MSBuild 17.14：Debug / Release Build成功、エラー0。既存の未使用フィールドとJSONデシリアライズ用フィールドの警告あり。
+- x86 `tests/BrowserWorkspaceChecks.cs`：12チェック成功。Browser / Profile / Group分離、複数URL CLI、新Window CLI、個別Profile、無効メンバー・グループ失敗後の継続、JSON往復、旧JSON省略項目、実環境Chrome/EdgeのProfileメタ情報検出。
+- x86 `tests/LaunchModelChecks.cs`：12チェック成功。5種類の起動指示、Applicationの引数・WorkingDirectory、Folder引用符、File / URLのOS関連付け、Commandの既存/kとWorkingDirectory未適用、5種類の新Repositoryでの再読み込み、de.txt移行時の原本保持。
+- 起動テストはProcessStartInfoの捕捉であり、外部アプリの実ウィンドウ配置検証ではない。
+- Computer Useで専用fixtureを使用してWPFを実起動。灰色Header・ダークな左右ペインを視認。Chrome URLの3セクションとProfile / Main Group表示を確認。
+- 編集ダイアログの3セクション・配色を視認。ChromeからDefaultに変更するとProfile / Group欄が非表示になることを確認。
+- 編集ダイアログから保存成功。JSONでVersion・Workspace / Item ID・Target・WorkingDirectory・非表示Groupの保持を確認。
+- Folder選択時はExplorerと配置指定なしを表示し、Browser Profile / Group / 引数 / WorkingDirectoryを表示しないことを確認。
+- 検証用GUIを終了。実ユーザーのworkspaces.jsonは変更していない。
 
-- Preservation format for legacy `PathFileSelect` and `PathImagevisual` data.
-- Versioned new persistence format and exact backup/rollback behavior.
-- Command quoting/lifetime/error policy and batch-launch failure semantics.
+## 過去の検証と今回未確認の範囲
 
-## Verified
+2026-09-09にはDebug / Release BuildとBrowser関連12チェック、Chrome/Edgeへの実起動コマンド送信・追加Window出現、ChatGPT favicon取得・デコード・同一originキャッシュ再利用を確認済み。
+ただし正確なA/Bタブ配置・C分離や異なるProfileの実Window Identityは未確認のまま。
+今回、外部アプリ全種類の実起動、GUI終了後の再起動による読込、全Browser / TypeのGUI組合せ、cold start、実ユーザーde.txtの完全な移行は検証していません。
 
-- Visual Studio 2022 MSBuild Debug Build succeeds with 0 errors; existing unused-field warnings remain.
-- The new startup XAML and all new model/repository/service files compile into `LauncherM/bin/Debug/LauncherM.exe`.
-- The UI Build succeeds with the legacy-inspired Workspace window as the startup resource.
-- The Workspace window was visually tuned toward the legacy reference: gray header, dark panels, outlined gray controls, blue selection accents, tile layout, and right-side detail card.
+## Known Issues / 実装制約
 
-## Not Yet Verified
+- WorkingDirectoryはApplicationだけに適用。Commandその他の種類で有効と解釈しない。GUIからの編集も未対応。
+- Fileの任意エディタ選択、Folderの任意Opener、既存Browser WindowへのTab配置は未実装。
+- Window Groupは起動時CLIで、ブラウザの設定やポリシーによる結果まで保証しない。
+- 非標準user-data root、portable版、削除済みProfile等の自動管理は未対応。
+- 青ブロック群はOpacity切替のみ。歯車で開く設定画面は新Workspace UIの保存と未統合。
+- Repositoryはatomic write、バックアップ、破損JSON復旧に未対応。
+- de.txt移行は所属・タイトル・パスのみ。旧icon / memo / visual / PathFileSelectは元ファイルに残り、JSONへ完全移行しない。旧Orderによる並べ替えもない。
+- 旧コードには環境固有の絶対パスが残存。
 
-- GUI startup, external Application/Folder/URL/Command launches, JSON restart loading, and legacy migration with a real user `de.txt` were not executed end-to-end in this pass.
-- The gear currently opens the existing settings window with a temporary settings object; persistence of those settings from the new window is not yet integrated.
-- The reference image was used for visual comparison, but pixel-level visual QA of the running WPF window remains pending.
+## 変更範囲
 
-These items are not implemented by this restart task.
-
-## Known Issues
-
-- Some source contains legacy absolute paths such as `F:\作業用\...`; these are environment-specific and must not be treated as portable behavior.
-- Runtime behavior for every launch type and saved-data migration has not been comprehensively verified.
-- The build emits unused-field warnings.
-
-## Build Environment
-
-- Visual Studio 2022 Community MSBuild 17.14
-- .NET Framework reference assemblies 4.8
-- C# compiler language version set to `latest` for the legacy project
-
-## Next Investigation
-
-Confirm persistence format and launch behavior on a clean machine, then decide whether the current data model can be incrementally adapted to Workspace / Launch Item concepts.
-
-## Browser Workspace extension (2026-09-09)
-
-Implemented: URL editor detects Chrome/Edge profile names from the standard user-data
-`Local State` file's `profile.info_cache`; only display name and directory identifiers
-are used. The selected directory is stored in BrowserProfile, not the display name.
-Manual profile entry remains available. BrowserWindowGroup is an optional version-1
-JSON member. Explicit Chrome/Edge groups launch once per browser/profile/group with
-`--new-window` and multiple URLs. Empty groups retain individual launching. Default
-and Firefox do not support window grouping. Workspace defaults are deferred.
-
-Verified: Debug and Release configuration builds; 12 focused checks including grouping,
-failure continuation, old JSON, serialization and actual profile metadata detection.
-Both browsers accepted real launch commands and additional windows appeared; exact
-A/B tab placement and C separation remain NOT VERIFIED because Computer Use stopped.
-Cold starts, GUI save/restart, and distinct-profile window identity remain unverified.
-
-2026-09-09 Chrome-not-found fix: reproduced in an x86 process: both ProgramFiles and
-ProgramFilesX86 resolve to Program Files (x86), while installed Chrome is in Program
-Files. Added App Paths lookup in both registry views plus ProgramW6432 fallback.
-All 12 checks pass when compiled x86. Release fix built and the normal bin/Release executable updated after LauncherM closed.
-
-No credentials, cookies, tokens, login automation, CDP, browser extensions or browser
-UI automation are part of the product. Authentication remains in browser profiles.
-
-## URL icons (2026-09-09)
-
-Implemented: URL LaunchItems with no explicit IconPath fetch and cache the site's
-favicon under `%LOCALAPPDATA%\LauncherM\WebsiteIcons`. LauncherM first requests the
-site's conventional `/favicon.ico`; if the site refuses that request, it falls back
-to Google's favicon service. Existing URL items are filled after startup without
-blocking the window, and new/edited/dropped URLs are filled before saving. The edit
-dialog exposes an icon path and file picker for ICO, PNG, JPEG, BMP, GIF, EXE and LNK.
-Raster image files are rendered directly instead of showing their Windows file-type
-icon. The existing right-click `アイコンを変更` action remains available.
-
-Verified: Debug build succeeds. An x86 focused check downloaded the ChatGPT favicon,
-validated it through WPF's image decoder, and confirmed same-origin cache reuse.
+今回の設計整理は既存平坦モデルを維持し、DataMember・JSON Version・LaunchServiceの挙動を変更していません。
+着手時点の未コミットBrowser / Profile / Group / URLアイコン実装を保全し、その上に文書・GUI整理と回帰チェックを追加しています。

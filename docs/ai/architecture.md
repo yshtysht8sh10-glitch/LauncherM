@@ -1,65 +1,59 @@
 # Architecture
 
-## Current Architecture
+## Implemented：現在の構造
 
-- Solution: `LauncherM.sln`
-- Active project: `LauncherM/LauncherM.csproj`
-- UI: WPF (`Window`, XAML)
-- Target: .NET Framework 4.8
-- Main UI: `01_UI/0010_MainWindow.xaml` and code-behind
-- Settings UI: `01_UI/0020_EnvironmentWindow.xaml`
-- Application logic: partial `MainWindow` files under `02_Application`
-- Infrastructure: text-file reader/writer helpers under `04_Infrastructure`
-- Data: `StructureDataSave` / `StructureDataSavePartData` stored in the main window code-behind
+- `LauncherM.sln` / `LauncherM/LauncherM.csproj`：WPF、.NET Framework 4.8。
+- `App.xaml`のStartupUriは`01_UI/WorkspaceWindow.xaml`。Workspace選択、左側タイル、右側詳細、編集ダイアログをcode-behindで管理。
+- `03_Domain/WorkspaceModels.cs`：WorkspaceDocument → Workspace → LaunchItem。概念を表すための新しいクラス階層は導入していません。
+- `02_Application/LaunchService.cs`：個別起動とWorkspace一括起動。ProcessStartInfoの生成と起動失敗の集約を担当。
+- `04_Infrastructure/WorkspaceRepository.cs`：DataContractJsonSerializerで作業ディレクトリの`workspaces.json`を読み書き。Version = 1。
+- `BrowserProfiles.cs`：標準Local Stateのprofile.info_cacheから表示名とDirectoryのみを読み、Chrome/Edgeの候補を表示。手入力も可能。FirefoxはProfile名。
+- `WebsiteIconCache.cs`：URL faviconの取得・ローカルキャッシュ。IconPathは自動取得と手動指定の双方に使用。
+- 旧`0010_MainWindow`、設定画面、de.txt / se.txt関連コードは残存。MUGEN固有処理は旧UI側に留め、汎用Coreへ移しません。
 
-The current prototype uses a flat list of launcher slots and serialized text files (`de.txt`, `se.txt`). It is not yet a Workspace/Launch Item model.
+## 中核概念と既存モデルの対応
 
-## Investigated Existing Structure
+設計思想の正本は[design-philosophy.md](../design-philosophy.md)です。
+Workspaceは作業環境、LaunchItemはその構成要素。Target / Opener / Destinationは独立した役割で、それぞれ必要に応じたContextを持つ概念です。
 
-- The four launcher areas are fixed WPF `StackPanel`s: `stackLauncher00` through `stackLauncher03` in `01_UI/0010_MainWindow.xaml`.
-- `Const.MaxQuantityStackLauncher` is fixed at `4`. Visibility and colors are also four named properties (`DispLauncher00` ... `03`).
-- `MainWindow` creates `m_StackLauncher` as a four-element `List<StackPanel>` and `m_ListListButtonElementLink` as a nested list indexed by `[launcher number][display order]`. These lists reduce event-handler duplication, but the XAML controls and several settings/handlers remain explicitly duplicated.
-- Each displayed item is a WPF `Button` whose content is a `StackPanel` containing an image and text. The UI is directly coupled to the saved data and uses code-behind event handlers rather than data binding or view models.
+| 概念 | 現在のフィールド / 処理 | 実装範囲 |
+| --- | --- | --- |
+| Target | Type、Target | Application / Folder / File / Url / Command。Project専用型なし |
+| Opener | Browser、LaunchServiceのType分岐 | URLはDefault / Chrome / Edge / Firefox。他の型は暗黙の実行方法 |
+| Opener Context | BrowserProfile | Chrome/EdgeのDirectory ID、FirefoxのProfile名。サービス側Identityではない |
+| Opener Context | Arguments、WorkingDirectory | ArgumentsはApplication / Command、WorkingDirectoryはApplicationのみ使用 |
+| Destination | 起動方法、BrowserWindowGroupの有無 | 明示指定なしはOS / アプリ任せ。Chrome/EdgeのWorkspace一括起動では新しいBrowser Window |
+| Destination Context | BrowserWindowGroup | 同一Workspace内のBrowser・Profile・Group単位。既存Window IDやブラウザの色付きTab Groupではない |
+| Target Context | 対応フィールドなし | 期待するサービスアカウント等の概念のみ |
+| 表示・識別 | Id、Name、IconPath | 3要素や認証Contextには含めない |
 
-## Current Data Model and Persistence
+ApplicationはTarget自身を実行、FileはOS関連付け、Folderはexplorer.exe、Commandはcmd.exe /k。
+これは現在の実装制約であり、TargetとOpenerが永久に固定される設計ではありません。
+一括起動は未指定グループを個別起動し、Chrome/Edgeの明示グループに`--new-window`と複数URLを渡します。
+個別起動ではWindow Groupを適用しません。Default / Firefoxで保存されたGroupは起動に使いません。
+ブラウザ検出は両Registry ViewのApp Pathsとインストールパスを参照します。
 
-The persisted item is the nested `MainWindow.StructureDataSavePartData` class. It contains `NoAffiliationLuncher`, `OrderDisplayInLuncher`, `PathExe`, `PathImageIcon`, `PathImagevisual`, `StringTitle`, `StringMemo`, and `PathFileSelect` (`List<string>`). There is no item ID, type, arguments, working directory, or schema/version field.
+## Contextと実行保証
 
-`de.txt` is read and written in the current working directory using Shift-JIS. Each item is one colon-delimited line: launcher number, display order, executable/target path, icon path, visual path, title, memo, then zero or more select.def/lua paths. Colons and other reserved characters are escaped by the existing replacement helpers. `se.txt` stores display settings as symbolic `key:value` lines, also in Shift-JIS. Neither format has an explicit version or atomic-write/backup protocol. Paths are absolute when selected by the user, so portability and missing-path handling are risks.
+Target IdentityとOpener Identityを共通Userへ統合しません。ブラウザProfileを選んでもサービスのアカウント選択は保証されません。
+Contextは実行パラメータにできるものと期待メタ情報を区別します。現在のモデルにはTarget Accountや汎用Contextの永続化はありません。
+LauncherMはPassword / Cookie / Session / OAuth Tokenを扱わず、認証とログイン状態はブラウザ・サービスに委ねます。
 
-## Recommended Migration Direction
+## GUI
 
-Do not replace the existing persistence in-place yet. Introduce a small domain model and an adapter that can read the legacy `de.txt`, map launcher numbers 0..3 to four generated Workspaces, and map each part to a LaunchItem. Preserve the legacy files until the new format has been written and validated; write the new format to a separate versioned file and keep a backup before conversion. The adapter should be the only place that knows the legacy colon format.
+詳細ペインと既存編集ダイアログを3セクションで表示。URLだけBrowser選択、明示BrowserだけProfile、Chrome/EdgeだけGroup、Application / Commandだけ引数、Applicationだけ保存済みWorkingDirectoryを表示します。
+WorkingDirectoryは読み取り専用。Target Contextや未対応Destinationの入力欄は作りません。
+灰色Header、歯車、青いブロック群、ダークな左右ペイン、Workspace選択・すべて起動は維持。
+ブロックは現在Opacity切替のみ。設定ウィンドウは一時設定オブジェクトで開き、新UIとの設定保存統合は未完です。
 
-The recommended initial model is described in `docs/ai/workspace-design.md`. It deliberately leaves ordering, delays, and readiness policies out of the first implementation while keeping the model extensible.
+## 保存互換性と既存制約
 
-## v0.1 Implementation
+今回の整理によるDataMember・Version・起動サービスの変更はありません。Browser / Profile / Group欠落の旧JSONはOS既定起動へフォールバックします。
+JSONがない場合のみde.txtを読み、launcher 0..3を4 Workspaceへ、タイトルとパスをApplicationへ移行してJSON保存します。元のde.txt / se.txtは上書きしません。
+現行移行は旧icon / memo / visual / PathFileSelectをJSONへ移さず、表示順フィールドでも並べ替えません。バックアップ・atomic write・破損JSONからの復旧は未実装です。
 
-`03_Domain/WorkspaceModels.cs` now contains `Workspace`, `LaunchItem`, `LaunchItemType`, and versioned `WorkspaceDocument`. URL LaunchItems optionally store `Browser` (`Default`, `Chrome`, `Edge`, or `Firefox`) and `BrowserProfile`; missing fields in older JSON default to the OS browser. `04_Infrastructure/WorkspaceRepository.cs` stores `workspaces.json` using the .NET Framework `DataContractJsonSerializer` and migrates legacy `de.txt` only when the JSON file does not exist. `02_Application/LaunchService.cs` owns individual and sequential Workspace launch, including browser-specific URL process arguments. `01_UI/WorkspaceWindow.xaml` provides the minimal selection, individual launch, and launch-all UI and is the current startup window.
+## Planned / Future（未実装）
 
-The v0.1 UI keeps the old LauncherM character: dark gray panels, blue header accents, a gear settings entry point, and the four blue/purple layout blocks. The blocks currently toggle visual opacity only; they are “Legacy Layout Visibility Controls,” reserved for later reconnecting to panel visibility settings. Registered LaunchItems are shown as tiles on the left, with the selected item’s details and actions on the right.
-
-The UI was tuned against the legacy reference image: gray header rather than blue fill, near-black content panes, gray outlined controls, bright blue selection/icon accents, and a fixed left/right split. The header also includes add/edit/menu affordances; add/edit remain placeholders until their data-entry flows are implemented.
-
-## Target / Proposed Architecture
-
-Future work may introduce an explicit Workspace and Launch Item model, with generic launch types and optional working directories. This is proposed architecture only; it is not currently implemented.
-
-## Reusable Areas
-
-The existing item data, settings persistence, WPF layout, individual launch handlers, and icon loading are useful starting points. They should be preserved until their behavior is understood.
-
-## Browser Workspace extension (2026-09-09)
-
-See workspace-design.md for Browser Context and BrowserWindowGroup semantics and
-current-status.md for verification. LaunchService groups explicit Chrome/Edge window
-requests, retains per-item failure reporting, and uses ordinary browser CLI arguments.
-BrowserProfiles reads friendly profile metadata; persistence keeps directory IDs.
-No authentication or browser session control is introduced. App Paths is searched in
-both registry views so an x86 launcher can discover a 64-bit browser.
-
-URL favicon retrieval is isolated in `04_Infrastructure/WebsiteIconCache.cs`. Cached
-files live in LocalApplicationData, while `LaunchItem.IconPath` continues to represent
-both automatic cache files and user-selected local icon/image files. The UI loads
-raster files directly and uses the existing Windows associated-icon path for executable,
-shortcut, file, and folder icons.
+Planned：任意Opener選択、Explorer Tab destination、Monitor・座標指定は次期検討対象で、実装順や時期は未確定。
+Future：独立Target Contextのメタ情報、Service-specific Target Identity Adapter、Destination Context拡張、仮想デスクトップ、WSL / VM / Remote環境。
+いずれも現在の起動保証ではなく、新しいGeneric Frameworkを必要とする前提にしません。

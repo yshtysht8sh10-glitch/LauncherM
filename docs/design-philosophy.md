@@ -25,9 +25,48 @@
 - UIの豪華さより実用性を優先する
 - 汎用Launcher CoreとMUGEN Extensionを分離する
 
-## Workspace / Launch Item
+## 中核モデル：何を / 何で / どこに
 
-Workspace / Group は複数の Launch Item を持つ作業単位の概念です。名称は仮称であり、既存コードの調査なしに全面変更しません。
+LauncherMは単なるアプリランチャーではなく、「いつもの作業環境を、ワンクリックで。」を実現するためのツールです。
+Workspaceは作業環境の単位であり、LaunchItemはその環境を構成する1要素です。
+各LaunchItemを、独立した3要素で考えます。
+
+- **Target（何を開くか）**：最終的に開きたいURL、ファイル、フォルダ、アプリ、コマンド、プロジェクト、その他のリソース。
+- **Opener（何で開くか）**：OS既定、ブラウザ、Explorer、エディタ、任意exe、shellなど、対象を開くアプリ・仕組み。
+- **Destination（どこに開くか）**：起動結果を配置する場所・環境・コンテキスト。画面座標だけでなく、ウィンドウ、タブ、仮想デスクトップや実行環境も概念上含みます。
+
+URLだからChrome、フォルダだからExplorerという固定関係を中核思想にしません。
+同じmemo.txtをNotepadでもVS Codeでも、同じURLをChromeでもEdgeでも開ける方向を目指します。
+現在はURLのBrowser選択のみが明示的なOpener選択であり、他の種類の任意Opener選択は未実装です。
+
+## 独立したContextとIdentity
+
+各要素は必要に応じて独立したContextを持てます。共通のUserフィールドへまとめません。
+概念モデルは `LaunchItem = Target(Value, Context) + Opener(Value, Context) + Destination(Value, Context)` ですが、これをそのままクラス階層や保存形式へ強制しません。
+
+例えば、Target = ChatGPT (`https://chatgpt.com`)、Target Context = 個人Googleアカウント、
+Opener = Chrome、Opener Context = 個人開発Profile、Destination = Browser Window、
+Destination Context = Mainという組合せです。
+**Target Identity（サービス側で誰として使いたいか）とOpener Identity（アプリ側のどのProfileで使うか）は別物**です。
+Chrome Profile Directoryの `Default` / `Profile 1` / `Profile 2` はOpener Contextであり、ChatGPTアカウントそのものではありません。
+
+Contextを持てることと、LauncherMがそれを強制できることは同義ではありません。
+Target Contextは、事前に準備したBrowser Profile、サービスが公開するURLの仕組み、将来のService-specific Adapterで実現できる場合だけ実行へ反映します。
+実現できない期待Contextはメタ情報として扱える設計とします。現在、汎用Target Contextの保存・編集は未実装です。
+
+LauncherMはPassword、Cookie、Session Token、OAuth Token、Google / Microsoft / GitHub等のPasswordを管理・保存・操作しません。
+Webサービスへの自動ログインは目的に含めず、認証状態はブラウザProfileと各サービスへ任せます。
+
+Destination Contextの例はBrowser Window Group = Main、Explorer Group = Project、
+Virtual Environment = WSL UbuntuとそのLinux Userです。Monitor / X / Y / Width / Height / Maximized、既存ウィンドウのタブ、仮想デスクトップ、VM / Remote等は将来の概念であり、現時点の実装を意味しません。
+WorkingDirectoryはプロセスが相対パスを解決するOpener Contextであり、ウィンドウの配置先ではありません。
+
+## GUIと実装の原則
+
+右側詳細・編集UIは「何を開く？」「何で開く？」「どこに開く？」を中心に整理します。
+Contextは必要な場合だけ表示し、未対応機能を操作可能に見せません。
+既存の灰色・ダークグレー・青アクセント、Ribbon/Header、歯車、青いブロック群、左側一覧、右側詳細、Workspace選択、一括起動を維持します。
+保存互換性とTime to Usableを優先し、Generic Context Framework、Plugin System、DI全面導入、Dynamic Property System、JSON Schema駆動UI、Workflow Engineを先行実装しません。
 
 ## MVP Scope
 
@@ -48,10 +87,3 @@ MUGEN固有機能は将来の拡張として、汎用Launcher Coreと分離し�
 ## Time to Usable
 
 LauncherMは複数の個人開発や作業環境を高速に切り替えるための基盤です。GUIの完成度や枝葉の機能より、実際の作業で利用可能になるまでの時間を優先します。拡張性は維持しますが、将来機能を先回りして実装しません。
-
-## Browser environments
-
-Browser Context (browser and profile) selects a preconfigured working environment.
-Browser Window Groups describe tabs to open together when launching a Workspace.
-LauncherM does not manage web-service login state or store passwords, cookies,
-session/OAuth tokens. Authentication belongs to browsers and web services.
