@@ -3,9 +3,10 @@
 ## Implemented：現在の構造
 
 - `LauncherM.sln` / `LauncherM/LauncherM.csproj`：WPF、.NET Framework 4.8。
-- `App.xaml`のStartupUriは`01_UI/WorkspaceWindow.xaml`。Workspace選択、左側タイル、右側詳細、編集ダイアログをcode-behindで管理。
+- `App.xaml`のStartupUriは`01_UI/WorkspaceWindow.xaml`。Workspace選択、中央タイル、右側詳細、編集ダイアログをcode-behindで管理。
 - `03_Domain/WorkspaceModels.cs`：WorkspaceDocument → Workspace → LaunchItem。概念を表すための新しいクラス階層は導入していません。
-- `02_Application/LaunchService.cs`：個別起動とWorkspace一括起動。ProcessStartInfoの生成と起動失敗の集約を担当。
+- `02_Application/LaunchService.cs`：個別起動とWorkspace一括起動。ProcessStartInfoの生成、起動したProcessの返却、起動失敗の集約を担当。
+- `02_Application/WorkspaceSession.cs`：WorkspaceごとにLauncherMが取得した安全に識別可能なProcessをメモリ上で追跡し、段階的に終了。
 - `04_Infrastructure/WorkspaceRepository.cs`：DataContractJsonSerializerで作業ディレクトリの`workspaces.json`を読み書き。Version = 1。
 - `BrowserProfiles.cs`：標準Local Stateのprofile.info_cacheから表示名とDirectoryのみを読み、Chrome/Edgeの候補を表示。手入力も可能。FirefoxはProfile名。
 - `WebsiteIconCache.cs`：URL faviconの取得・ローカルキャッシュ。IconPathは自動取得と手動指定の双方に使用。
@@ -43,7 +44,7 @@ LauncherMはPassword / Cookie / Session / OAuth Tokenを扱わず、認証とロ
 
 詳細ペインと既存編集ダイアログを3セクションで表示。URLだけBrowser選択、明示BrowserだけProfile、Chrome/EdgeだけGroup、Application / Commandだけ引数、Applicationだけ保存済みWorkingDirectoryを表示します。
 WorkingDirectoryは読み取り専用。Target Contextや未対応Destinationの入力欄は作りません。
-灰色Header、歯車、青いブロック群、ダークな左右ペイン、Workspace選択・すべて起動は維持。
+灰色Header、歯車、青いブロック群、ダークUI、Workspace選択・すべて起動は維持。ComboBoxを単一の選択状態としてタブを同期し、左Workspace操作・中央LaunchItem一覧・右LaunchItem詳細の3ペインを2本のGridSplitterで区切ります。左右幅はユーザー設定へ保存します。
 ブロックは現在Opacity切替のみ。設定ウィンドウは一時設定オブジェクトで開き、新UIとの設定保存統合は未完です。
 
 ## 保存互換性と既存制約
@@ -51,6 +52,12 @@ WorkingDirectoryは読み取り専用。Target Contextや未対応Destinationの
 今回の整理によるDataMember・Version・起動サービスの変更はありません。Browser / Profile / Group欠落の旧JSONはOS既定起動へフォールバックします。
 JSONがない場合のみde.txtを読み、launcher 0..3を4 Workspaceへ、タイトルとパスをApplicationへ移行してJSON保存します。元のde.txt / se.txtは上書きしません。
 現行移行は旧icon / memo / visual / PathFileSelectをJSONへ移さず、表示順フィールドでも並べ替えません。バックアップ・atomic write・破損JSONからの復旧は未実装です。
+
+## Workspace Lifecycle
+
+WorkspaceはLaunchItem集合であると同時に、Launch、起動Resourceの追跡、Closeを持つ実行中セッションです。セッションは永続化せずLauncherMプロセス内だけで管理します。ApplicationとCommandで`Process.Start`が返したProcessだけを追跡し、Close時は`CloseMainWindow`、待機、必要時の強制終了の順で処理します。Commandは追跡PIDを起点に`taskkill /PID /T /F`で子プロセスも停止します。
+
+URL、Folder、Fileは、既存ブラウザ・Explorer・OS関連付け先へ合流する可能性があるためClose対象外です。Chrome/EdgeのWindow GroupもCLIによる新規Window要求であり、安全なWindow Identityを取得できないため追跡終了しません。
 
 ## Planned / Future（未実装）
 

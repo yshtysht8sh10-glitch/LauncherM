@@ -5,7 +5,17 @@
 Workspaceは「作業環境」の単位で、複数のLaunchItemを持ちます。
 LaunchItemはTarget（何を）・Opener（何で）・Destination（どこに）の組合せです。
 各要素は独立したContextを持てる設計思想とし、既存の平坦なモデルを維持します。
-現在はWorkspace管理・LaunchItem編集・個別起動・すべて起動を実装済みです。
+現在はWorkspace管理・LaunchItem編集・個別起動・すべて起動に加え、安全に追跡できるResourceのWorkspace単位終了を実装済みです。
+
+## Workspace Lifecycle
+
+WorkspaceはLaunchItem集合であると同時に、LauncherM実行中だけ有効な作業セッションです。Application / Commandの起動時に返されたProcessをWorkspace IDとLaunchItem IDへ関連付けます。終了は通常終了要求、短い待機、残存時の強制終了の順です。Commandはその追跡PIDのプロセスツリーを対象にします。
+
+Browser、Explorer、OS関連付けで開くFileは共有プロセスや既存Windowへ合流し得るため追跡終了しません。無関係なWindowを閉じないことを優先した制約です。
+
+## Workspace UI
+
+上部のComboBoxが現在Workspaceの単一の選択状態です。横スクロール可能なタブは同じWorkspaceオブジェクトを選び、ComboBox変更時には選択表示を更新します。下部はWorkspace操作、LaunchItem一覧、LaunchItem詳細の3ペインで、2本のGridSplitterにより幅を変更できます。左右の幅はユーザー設定へ保存し、次回起動時に復元します。
 
 ## WebMUGEN Workspaceの例
 

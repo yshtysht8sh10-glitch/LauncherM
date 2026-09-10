@@ -22,5 +22,21 @@ namespace LauncherM.Properties {
                 return defaultInstance;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("220")]
+        public double WorkspacePaneWidth {
+            get { return ((double)(this["WorkspacePaneWidth"])); }
+            set { this["WorkspacePaneWidth"] = value; }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("390")]
+        public double DetailsPaneWidth {
+            get { return ((double)(this["DetailsPaneWidth"])); }
+            set { this["DetailsPaneWidth"] = value; }
+        }
     }
 }

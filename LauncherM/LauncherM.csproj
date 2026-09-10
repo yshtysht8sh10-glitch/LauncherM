@@ -42,6 +42,7 @@
     <Compile Include="03_Domain\WorkspaceModels.cs" />
     <Compile Include="04_Infrastructure\WorkspaceRepository.cs" />
     <Compile Include="02_Application\LaunchService.cs" />
+    <Compile Include="02_Application\WorkspaceSession.cs" />
     <Page Include="01_UI\WorkspaceWindow.xaml" />
     <Compile Include="01_UI\WorkspaceWindow.xaml.cs"><DependentUpon>WorkspaceWindow.xaml</DependentUpon></Compile>
     <Reference Include="System" />

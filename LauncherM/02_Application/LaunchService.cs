@@ -11,11 +11,12 @@ namespace LauncherM.Application
 {
     public sealed class LaunchService
     {
-        private readonly Action<ProcessStartInfo> start;
+        private readonly Func<ProcessStartInfo, Process> start;
         public LaunchService() : this(info => Process.Start(info)) { }
-        public LaunchService(Action<ProcessStartInfo> start) { this.start = start ?? throw new ArgumentNullException(nameof(start)); }
+        public LaunchService(Func<ProcessStartInfo, Process> start) { this.start = start ?? throw new ArgumentNullException(nameof(start)); }
+        public LaunchService(Action<ProcessStartInfo> start) : this(info => { start(info); return null; }) { if (start == null) throw new ArgumentNullException(nameof(start)); }
 
-        public void Launch(LaunchItem item)
+        public Process Launch(LaunchItem item)
         {
             if (item == null || string.IsNullOrWhiteSpace(item.Target)) throw new InvalidOperationException("Targetが未設定です。");
             ProcessStartInfo psi;
@@ -24,7 +25,7 @@ namespace LauncherM.Application
             else if (item.Type == LaunchItemType.File) psi = new ProcessStartInfo(item.Target) { UseShellExecute = true };
             else if (item.Type == LaunchItemType.Command) psi = new ProcessStartInfo("cmd.exe", "/k " + item.Target + (string.IsNullOrWhiteSpace(item.Arguments) ? "" : " " + item.Arguments));
             else psi = new ProcessStartInfo(item.Target, item.Arguments ?? "") { WorkingDirectory = item.WorkingDirectory ?? "" };
-            start(psi);
+            return start(psi);
         }
         private static ProcessStartInfo CreateUrlStartInfo(LaunchItem item)
         {
@@ -72,6 +73,10 @@ namespace LauncherM.Application
         }
         public List<string> LaunchWorkspace(Workspace workspace)
         {
+            return LaunchWorkspace(workspace, null);
+        }
+        public List<string> LaunchWorkspace(Workspace workspace, Action<LaunchItem, Process> launched)
+        {
             var failures = new List<string>();
             var handled = new HashSet<LaunchItem>();
             foreach (var item in workspace.LaunchItems)
@@ -79,7 +84,7 @@ namespace LauncherM.Application
                 if (!handled.Add(item)) continue;
                 if (!IsGrouped(item))
                 {
-                    try { Launch(item); } catch (Exception ex) { failures.Add(item.Name + ": " + ex.Message); }
+                    try { Process process = Launch(item); if (launched != null) launched(item, process); } catch (Exception ex) { failures.Add(item.Name + ": " + ex.Message); }
                     continue;
                 }
                 var group = workspace.LaunchItems.Where(other => IsGrouped(other)
@@ -102,7 +107,8 @@ namespace LauncherM.Application
                     info.Arguments = "--new-window "
                         + (string.IsNullOrWhiteSpace(item.BrowserProfile) ? "" : "--profile-directory=" + Quote(item.BrowserProfile) + " ")
                         + string.Join(" ", valid.Select(member => Quote(member.Target)));
-                    start(info);
+                    Process process = start(info);
+                    if (launched != null) foreach (var member in valid) launched(member, process);
                 }
                 catch (Exception ex) { foreach (var member in valid) failures.Add(member.Name + ": " + ex.Message); }
             }

@@ -12,6 +12,8 @@
 
 「いつもの作業環境を、ワンクリックで。」
 
+起動と対になる操作として「使い終わった作業環境を、ワンクリックで片付ける。」ことも重視します。
+
 単一アプリではなく、「WebMUGEN開発」「勉強」などの作業単位を起動するWindowsランチャーを目指します。
 
 ## Core Principles
@@ -24,6 +26,7 @@
 - 既存実装を理解せず全面リライトしない
 - UIの豪華さより実用性を優先する
 - 汎用Launcher CoreとMUGEN Extensionを分離する
+- WorkspaceをLaunchItem集合であると同時に、起動・追跡・終了のライフサイクルを持つ作業セッションとして扱う
 
 ## 中核モデル：何を / 何で / どこに
 
@@ -64,8 +67,9 @@ WorkingDirectoryはプロセスが相対パスを解決するOpener Contextで�
 ## GUIと実装の原則
 
 右側詳細・編集UIは「何を開く？」「何で開く？」「どこに開く？」を中心に整理します。
+Workspaceの選択はComboBoxと横スクロール可能なタブで同じ選択状態を共有します。メイン領域は左からWorkspace操作、LaunchItem一覧、LaunchItem詳細の3ペインとし、標準Splitterで幅を調整可能にします。
 Contextは必要な場合だけ表示し、未対応機能を操作可能に見せません。
-既存の灰色・ダークグレー・青アクセント、Ribbon/Header、歯車、青いブロック群、左側一覧、右側詳細、Workspace選択、一括起動を維持します。
+既存の灰色・ダークグレー・青アクセント、Ribbon/Header、歯車、青いブロック群、LaunchItem一覧、右側詳細、Workspace選択、一括起動を維持します。
 保存互換性とTime to Usableを優先し、Generic Context Framework、Plugin System、DI全面導入、Dynamic Property System、JSON Schema駆動UI、Workflow Engineを先行実装しません。
 
 ## MVP Scope

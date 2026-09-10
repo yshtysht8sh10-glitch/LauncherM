@@ -3,5 +3,8 @@
   <Profiles>
     <Profile Name="(Default)" />
   </Profiles>
-  <Settings />
+  <Settings>
+    <Setting Name="WorkspacePaneWidth" Type="System.Double" Scope="User"><Value Profile="(Default)">220</Value></Setting>
+    <Setting Name="DetailsPaneWidth" Type="System.Double" Scope="User"><Value Profile="(Default)">390</Value></Setting>
+  </Settings>
 </SettingsFile>

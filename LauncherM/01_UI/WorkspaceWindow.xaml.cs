@@ -8,6 +8,7 @@ using System.Windows.Media.Imaging;
 using System.Collections.Generic;
 using System.Windows.Input;
 using System.Threading.Tasks;
+using System.ComponentModel;
 using LauncherM.Application;
 using LauncherM.Domain;
 using LauncherM.Infrastructure;
@@ -21,6 +22,7 @@ namespace LauncherM
         private readonly LaunchService launcher = new LaunchService();
         private readonly GeneralPurpose generalPurpose = new GeneralPurpose();
         private readonly WebsiteIconCache websiteIcons = new WebsiteIconCache();
+        private readonly WorkspaceSessionManager sessions = new WorkspaceSessionManager();
         private LaunchItem selectedItem;
         private readonly HashSet<LaunchItem> selectedItems = new HashSet<LaunchItem>();
         private readonly Dictionary<LaunchItem, Button> itemTiles = new Dictionary<LaunchItem, Button>();
@@ -38,6 +40,8 @@ namespace LauncherM
             workspaceBox.ItemsSource = document.Workspaces;
             workspaceBox.IsEditable = true;
             workspaceBox.IsReadOnly = true;
+            RenderWorkspaceTabs();
+            RestoreSplitterWidths();
             if (document.Workspaces.Count > 0) workspaceBox.SelectedIndex = 0;
             Loaded += async (s, e) => await LoadMissingWebsiteIcons();
         }
@@ -46,6 +50,8 @@ namespace LauncherM
             if (updatingWorkspaceDisplay) return;
             if (showAllWorkspaces) { showAllWorkspaces = false; workspaceBox.Text = workspaceBox.SelectedItem is Workspace selectedWorkspace ? selectedWorkspace.Name : ""; }
             itemsPanel.Children.Clear(); itemTiles.Clear(); selectedItems.Clear(); Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return;
+            workspaceNameText.Text = workspace.Name;
+            UpdateWorkspaceTabs();
             foreach (LaunchItem item in workspace.LaunchItems) { StackPanel content = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center }; Image image = new Image { Source = GetItemIcon(item), Width = 42, Height = 42, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center }; content.Children.Add(image); content.Children.Add(new TextBlock { Text = item.Name, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap }); Button tile = new Button { Content = content, Tag = item, Style = (Style)FindResource("TileStyle") }; tile.Click += SelectItem; tile.MouseDoubleClick += OpenItemByDoubleClick; tile.MouseRightButtonDown += SelectItemForContextMenu; tile.ContextMenu = CreateItemContextMenu(); itemTiles[item] = tile; itemsPanel.Children.Add(tile); }
             ClearDetails();
         }
@@ -59,9 +65,9 @@ namespace LauncherM
         private bool showAllWorkspaces;
         private bool updatingWorkspaceDisplay;
         private static void AddMenuItem(ContextMenu menu, string header, RoutedEventHandler handler) { MenuItem item = new MenuItem { Header = header }; item.Click += handler; menu.Items.Add(item); }
-        private void AddWorkspace(object sender, RoutedEventArgs e) { string name = Prompt("Workspace名", "新しいWorkspace"); if (string.IsNullOrWhiteSpace(name)) return; document.Workspaces.Add(new Workspace { Name = name.Trim() }); repository.Save(document); workspaceBox.Items.Refresh(); workspaceBox.SelectedIndex = document.Workspaces.Count - 1; }
-        private void RenameWorkspace(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; string name = Prompt("Workspace名を変更", workspace.Name); if (string.IsNullOrWhiteSpace(name)) return; workspace.Name = name.Trim(); repository.Save(document); workspaceBox.Items.Refresh(); updatingWorkspaceDisplay = true; workspaceBox.Text = workspace.Name; updatingWorkspaceDisplay = false; }
-        private void DeleteWorkspace(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null || document.Workspaces.Count <= 1) return; if (MessageBox.Show("選択中のWorkspaceを削除しますか？", "確認", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return; int index = workspaceBox.SelectedIndex; document.Workspaces.Remove(workspace); repository.Save(document); workspaceBox.Items.Refresh(); workspaceBox.SelectedIndex = Math.Min(index, document.Workspaces.Count - 1); }
+        private void AddWorkspace(object sender, RoutedEventArgs e) { string name = Prompt("Workspace名", "新しいWorkspace"); if (string.IsNullOrWhiteSpace(name)) return; document.Workspaces.Add(new Workspace { Name = name.Trim() }); repository.Save(document); workspaceBox.Items.Refresh(); RenderWorkspaceTabs(); workspaceBox.SelectedIndex = document.Workspaces.Count - 1; }
+        private void RenameWorkspace(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; string name = Prompt("Workspace名を変更", workspace.Name); if (string.IsNullOrWhiteSpace(name)) return; workspace.Name = name.Trim(); repository.Save(document); workspaceBox.Items.Refresh(); RenderWorkspaceTabs(); updatingWorkspaceDisplay = true; workspaceBox.Text = workspace.Name; updatingWorkspaceDisplay = false; workspaceNameText.Text = workspace.Name; UpdateWorkspaceTabs(); }
+        private void DeleteWorkspace(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null || document.Workspaces.Count <= 1) return; if (sessions.ActiveCount(workspace.Id) > 0) { MessageBox.Show("このWorkspaceには起動中の追跡対象があります。先に「すべて閉じる」を実行してください。", "Workspaceを削除できません"); return; } if (MessageBox.Show("選択中のWorkspaceを削除しますか？", "確認", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return; int index = workspaceBox.SelectedIndex; document.Workspaces.Remove(workspace); repository.Save(document); workspaceBox.Items.Refresh(); RenderWorkspaceTabs(); workspaceBox.SelectedIndex = Math.Min(index, document.Workspaces.Count - 1); }
         private void ToggleShowAllWorkspaces(object sender, RoutedEventArgs e) { showAllWorkspaces = !showAllWorkspaces; updatingWorkspaceDisplay = true; workspaceBox.Text = showAllWorkspaces ? "全Workspace" : (workspaceBox.SelectedItem is Workspace workspace ? workspace.Name : ""); updatingWorkspaceDisplay = false; RenderItems(); }
         private void RenderItems() { itemsPanel.Children.Clear(); itemTiles.Clear(); selectedItems.Clear(); if (showAllWorkspaces) { ClearDetails(); foreach (Workspace workspace in document.Workspaces) foreach (LaunchItem item in workspace.LaunchItems) AddTile(item); } else { WorkspaceChanged(null, null); } }
         private void AddTile(LaunchItem item) { StackPanel content = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center }; content.Children.Add(new Image { Source = GetItemIcon(item), Width = 42, Height = 42, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center }); content.Children.Add(new TextBlock { Text = item.Name, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap }); Button tile = new Button { Content = content, Tag = item, Style = (Style)FindResource("TileStyle") }; tile.Click += SelectItem; tile.MouseDoubleClick += OpenItemByDoubleClick; tile.MouseRightButtonDown += SelectItemForContextMenu; tile.ContextMenu = CreateItemContextMenu(); itemTiles[item] = tile; itemsPanel.Children.Add(tile); }
@@ -74,8 +80,17 @@ namespace LauncherM
         private Button FindTileAt(Point point) { foreach (Button tile in itemTiles.Values) { Point topLeft = tile.TranslatePoint(new Point(0, 0), itemsDropArea); if (new Rect(topLeft, tile.RenderSize).Contains(point)) return tile; } return null; }
         private void UpdateSelectionVisuals() { ShowDetails(); foreach (KeyValuePair<LaunchItem, Button> pair in itemTiles) { bool isActive = selectedItem == pair.Key; bool isSelected = selectedItems.Contains(pair.Key); pair.Value.BorderBrush = isActive ? new SolidColorBrush(Color.FromRgb(255, 180, 45)) : (isSelected ? new SolidColorBrush(Color.FromRgb(40, 170, 255)) : new SolidColorBrush(Color.FromRgb(80, 80, 80))); pair.Value.BorderThickness = isActive ? new Thickness(4) : (isSelected ? new Thickness(3) : new Thickness(1)); pair.Value.Background = isActive ? new SolidColorBrush(Color.FromRgb(105, 78, 35)) : (isSelected ? new SolidColorBrush(Color.FromRgb(55, 75, 95)) : new SolidColorBrush(Color.FromRgb(58, 58, 58))); } }
         private void LaunchSelected(object sender, RoutedEventArgs e) { if (selectedItem != null) TryLaunch(selectedItem); }
-        private void LaunchAll(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; var failures = launcher.LaunchWorkspace(workspace); if (failures.Count > 0) MessageBox.Show(string.Join("\n", failures), "起動できなかった項目"); }
-        private void TryLaunch(LaunchItem item) { try { launcher.Launch(item); } catch (Exception ex) { MessageBox.Show(ex.Message, "起動エラー"); } }
+        private void LaunchAll(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; var failures = launcher.LaunchWorkspace(workspace, (item, process) => sessions.Track(workspace, item, process)); if (failures.Count > 0) MessageBox.Show(string.Join("\n", failures), "起動できなかった項目"); }
+        private void TryLaunch(LaunchItem item) { Workspace workspace = workspaceBox.SelectedItem as Workspace; try { Process process = launcher.Launch(item); sessions.Track(workspace, item, process); } catch (Exception ex) { MessageBox.Show(ex.Message, "起動エラー"); } }
+        private async void CloseWorkspace(object sender, RoutedEventArgs e)
+        {
+            Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return;
+            int count = sessions.ActiveCount(workspace.Id);
+            if (count == 0) { MessageBox.Show("このWorkspaceでLauncherMが追跡している起動中のApplication / Commandはありません。", "Workspaceを閉じる"); return; }
+            if (MessageBox.Show(workspace.Name + " から起動した追跡対象 " + count + " 件を閉じますか？", "Workspaceをすべて閉じる", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            var failures = await sessions.CloseAsync(workspace.Id);
+            if (failures.Count > 0) MessageBox.Show(string.Join("\n", failures), "閉じられなかった項目");
+        }
         private void OpenSelectedFolder(object sender, RoutedEventArgs e) { if (selectedItem == null || string.IsNullOrWhiteSpace(selectedItem.Target)) return; string path = Directory.Exists(selectedItem.Target) ? selectedItem.Target : Path.GetDirectoryName(selectedItem.Target); if (!string.IsNullOrWhiteSpace(path) && Directory.Exists(path)) Process.Start(new ProcessStartInfo("explorer.exe", "\"" + path + "\"")); }
         private void OpenSettings(object sender, RoutedEventArgs e) { StructureSettingsEnvironmental settings = new StructureSettingsEnvironmental(); new EnvironmentWindow(ref settings).ShowDialog(); }
         private async void AddItem(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; LaunchItem item = ShowLaunchItemDialog(null); if (item == null) return; workspace.LaunchItems.Add(item); await EnsureWebsiteIcon(item); repository.Save(document); WorkspaceChanged(null, null); }
@@ -218,6 +233,42 @@ namespace LauncherM
         private BitmapSource GetItemIcon(LaunchItem item) { try { string iconPath = !string.IsNullOrWhiteSpace(item.IconPath) ? item.IconPath : item.Target; if (File.Exists(iconPath)) { string ext = Path.GetExtension(iconPath).ToLowerInvariant(); if (websiteIcons.IsManagedPath(iconPath) || ext == ".ico" || ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".gif") { var image = new BitmapImage(); image.BeginInit(); image.CacheOption = BitmapCacheOption.OnLoad; image.UriSource = new Uri(iconPath, UriKind.Absolute); image.EndInit(); image.Freeze(); return image; } return generalPurpose.GetIconFromFilePathSpecified(iconPath); } if (Directory.Exists(iconPath)) return generalPurpose.GetIconFromFilePathSpecified(iconPath); } catch { } return null; }
         private async Task EnsureWebsiteIcon(LaunchItem item) { if (item.Type != LaunchItemType.Url || !string.IsNullOrWhiteSpace(item.IconPath)) return; string path = await Task.Run(() => websiteIcons.GetOrDownload(item.Target)); if (!string.IsNullOrWhiteSpace(path)) item.IconPath = path; }
         private async Task LoadMissingWebsiteIcons() { bool changed = false; foreach (var workspace in document.Workspaces) foreach (var item in workspace.LaunchItems) if (item.Type == LaunchItemType.Url && string.IsNullOrWhiteSpace(item.IconPath)) { await EnsureWebsiteIcon(item); changed |= !string.IsNullOrWhiteSpace(item.IconPath); } if (changed) { repository.Save(document); RenderItems(); } }
+        private void RenderWorkspaceTabs()
+        {
+            workspaceTabs.Children.Clear();
+            foreach (Workspace workspace in document.Workspaces)
+            {
+                var tab = new System.Windows.Controls.Primitives.ToggleButton { Content = workspace.Name, Tag = workspace, Style = (Style)FindResource("WorkspaceTabStyle") };
+                tab.Click += WorkspaceTabClicked;
+                workspaceTabs.Children.Add(tab);
+            }
+            UpdateWorkspaceTabs();
+        }
+        private void WorkspaceTabClicked(object sender, RoutedEventArgs e)
+        {
+            Workspace workspace = ((System.Windows.Controls.Primitives.ToggleButton)sender).Tag as Workspace;
+            if (workspace != null) workspaceBox.SelectedItem = workspace;
+        }
+        private void UpdateWorkspaceTabs()
+        {
+            Workspace current = workspaceBox.SelectedItem as Workspace;
+            foreach (object child in workspaceTabs.Children)
+            {
+                var tab = child as System.Windows.Controls.Primitives.ToggleButton;
+                if (tab != null) tab.IsChecked = ReferenceEquals(tab.Tag, current);
+            }
+        }
+        private void RestoreSplitterWidths()
+        {
+            if (Properties.Settings.Default.WorkspacePaneWidth >= workspaceColumn.MinWidth) workspaceColumn.Width = new GridLength(Properties.Settings.Default.WorkspacePaneWidth);
+            if (Properties.Settings.Default.DetailsPaneWidth >= detailsColumn.MinWidth) detailsColumn.Width = new GridLength(Properties.Settings.Default.DetailsPaneWidth);
+        }
+        private void WindowClosing(object sender, CancelEventArgs e)
+        {
+            Properties.Settings.Default.WorkspacePaneWidth = workspaceColumn.ActualWidth;
+            Properties.Settings.Default.DetailsPaneWidth = detailsColumn.ActualWidth;
+            Properties.Settings.Default.Save();
+        }
         private void ClearDetails() { selectedItem = null; ShowDetails(); openerText.Text = profileText.Text = groupText.Text = destinationText.Text = ""; detailName.Text = "LaunchItemを選択"; detailMemo.Text = typeText.Text = targetText.Text = argumentsText.Text = workingDirectoryText.Text = ""; detailIcon.Source = null; }
     }
 }
