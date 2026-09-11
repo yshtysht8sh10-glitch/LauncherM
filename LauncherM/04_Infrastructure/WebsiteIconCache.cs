@@ -53,6 +53,15 @@ namespace LauncherM.Infrastructure
             return null;
         }
 
+        public string GetCachedPath(string target)
+        {
+            Uri page;
+            if (!Uri.TryCreate(target, UriKind.Absolute, out page)
+                || (page.Scheme != Uri.UriSchemeHttp && page.Scheme != Uri.UriSchemeHttps)) return null;
+            string path = Path.Combine(cacheDirectory, Hash(page.GetLeftPart(UriPartial.Authority)) + ".icon");
+            return IsUsableImage(path) ? path : null;
+        }
+
         public bool IsManagedPath(string path)
         {
             if (string.IsNullOrWhiteSpace(path)) return false;

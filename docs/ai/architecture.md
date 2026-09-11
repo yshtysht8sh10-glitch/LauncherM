@@ -9,7 +9,8 @@
 - `02_Application/WorkspaceSession.cs`：WorkspaceごとにLauncherMが取得した安全に識別可能なProcessをメモリ上で追跡し、段階的に終了。
 - `04_Infrastructure/WorkspaceRepository.cs`：DataContractJsonSerializerで作業ディレクトリの`workspaces.json`を読み書き。Version = 1。
 - `BrowserProfiles.cs`：標準Local Stateのprofile.info_cacheから表示名とDirectoryのみを読み、Chrome/Edgeの候補を表示。手入力も可能。FirefoxはProfile名。
-- `WebsiteIconCache.cs`：URL faviconの取得・ローカルキャッシュ。IconPathは自動取得と手動指定の双方に使用。
+- `WebsiteIconCache.cs`：URL faviconの取得・ローカルキャッシュ。IconPathは自動取得したfaviconと手動指定の双方に使用。
+- `IconResolver.cs`：LaunchItemの表示アイコンを一元解決。明示IconPathを最優先し、実在ファイル／exeとフォルダはWindows Shell、HTTP(S)は既存faviconキャッシュ、その他の絶対URIはSchemeとしてWindows Protocol Associationを参照する。URI SchemeはUserChoiceのProgId、Scheme登録の順に調べ、`DefaultIcon`、次に`shell\\open\\command`のexeから抽出する。解決のためにTargetを起動しない。
 - 旧`0010_MainWindow`、設定画面、de.txt / se.txt関連コードは残存。MUGEN固有処理は旧UI側に留め、汎用Coreへ移しません。
 
 ## 中核概念と既存モデルの対応
@@ -27,6 +28,8 @@ Workspaceは作業環境、LaunchItemはその構成要素。Target / Opener / D
 | Destination Context | BrowserWindowGroup | 同一Workspace内のBrowser・Profile・Group単位。既存Window IDやブラウザの色付きTab Groupではない |
 | Target Context | 対応フィールドなし | 期待するサービスアカウント等の概念のみ |
 | 表示・識別 | Id、Name、IconPath | 3要素や認証Contextには含めない |
+
+表示アイコンの解決順は、ユーザー明示IconPath、実在するTargetファイル／フォルダ、HTTP(S) favicon、URI Scheme関連付け、LauncherM既定表示。`DefaultIcon`の環境変数とアイコンインデックスを解釈し、commandは`CommandLineToArgvW`で先頭の実行ファイルを安全に分離する。Schemeごとの成功・失敗結果はプロセス内でキャッシュする。Packaged Appの間接リソース表記など、通常ファイルへ静的に解決できない登録は既定表示へフォールバックする。
 
 ApplicationはTarget自身を実行、FileはOS関連付け、Folderはexplorer.exe、Commandはcmd.exe /k。
 これは現在の実装制約であり、TargetとOpenerが永久に固定される設計ではありません。

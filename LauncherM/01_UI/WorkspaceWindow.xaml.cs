@@ -24,8 +24,8 @@ namespace LauncherM
         private readonly WorkspaceDocument document;
         private readonly WorkspaceRepository repository;
         private readonly LaunchService launcher = new LaunchService();
-        private readonly GeneralPurpose generalPurpose = new GeneralPurpose();
         private readonly WebsiteIconCache websiteIcons = new WebsiteIconCache();
+        private readonly IconResolver iconResolver;
         private readonly WorkspaceSessionManager sessions = new WorkspaceSessionManager();
         private LaunchItem selectedItem;
         private readonly HashSet<LaunchItem> selectedItems = new HashSet<LaunchItem>();
@@ -48,6 +48,7 @@ namespace LauncherM
         private double workspacePaneWidthBeforeOverview = 220;
         public WorkspaceWindow()
         {
+            iconResolver = new IconResolver(websiteIcons);
             InitializeComponent();
             itemsDropArea.PreviewMouseLeftButtonDown += ItemsAreaMouseDown;
             itemsDropArea.PreviewMouseMove += ItemsAreaMouseMove;
@@ -325,7 +326,7 @@ namespace LauncherM
             type.SelectionChanged += (s, e) => updateUrlFields();
             loadProfiles(source?.BrowserProfile); updateUrlFields();
             AddDialogSection(panel, "表示設定");
-            panel.Children.Add(new TextBlock { Text = "アイコン（空欄のURLはfaviconを自動取得）" });
+            panel.Children.Add(new TextBlock { Text = "アイコン（空欄なら自動取得）" });
             var iconRow = new DockPanel { Margin = new Thickness(0, 2, 0, 10) };
             var iconBrowse = new Button { Content = "参照…", Width = 75, Margin = new Thickness(6, 0, 0, 0) };
             DockPanel.SetDock(iconBrowse, Dock.Right); iconRow.Children.Add(iconBrowse);
@@ -398,8 +399,8 @@ namespace LauncherM
             WorkspaceChanged(null, null);
         }
         private static string IconFor(LaunchItemType type) { switch (type) { case LaunchItemType.Folder: return "▰"; case LaunchItemType.Url: return "◎"; case LaunchItemType.Command: return ">_"; case LaunchItemType.File: return "▤"; default: return "◆"; } }
-        private BitmapSource GetItemIcon(LaunchItem item) { try { string iconPath = !string.IsNullOrWhiteSpace(item.IconPath) ? item.IconPath : item.Target; if (File.Exists(iconPath)) { string ext = Path.GetExtension(iconPath).ToLowerInvariant(); if (websiteIcons.IsManagedPath(iconPath) || ext == ".ico" || ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".gif") { var image = new BitmapImage(); image.BeginInit(); image.CacheOption = BitmapCacheOption.OnLoad; image.UriSource = new Uri(iconPath, UriKind.Absolute); image.EndInit(); image.Freeze(); return image; } return generalPurpose.GetIconFromFilePathSpecified(iconPath); } if (Directory.Exists(iconPath)) return generalPurpose.GetIconFromFilePathSpecified(iconPath); } catch { } return null; }
-        private async Task EnsureWebsiteIcon(LaunchItem item) { if (item.Type != LaunchItemType.Url || !string.IsNullOrWhiteSpace(item.IconPath)) return; string path = await Task.Run(() => websiteIcons.GetOrDownload(item.Target)); if (!string.IsNullOrWhiteSpace(path)) item.IconPath = path; }
+        private BitmapSource GetItemIcon(LaunchItem item) { return iconResolver.Resolve(item); }
+        private async Task EnsureWebsiteIcon(LaunchItem item) { string path = await Task.Run(() => iconResolver.GetOrDownloadWebsiteIcon(item)); if (!string.IsNullOrWhiteSpace(path)) item.IconPath = path; }
         private async Task LoadMissingWebsiteIcons() { bool changed = false; foreach (var workspace in document.Workspaces) foreach (var item in workspace.LaunchItems) if (item.Type == LaunchItemType.Url && string.IsNullOrWhiteSpace(item.IconPath)) { await EnsureWebsiteIcon(item); changed |= !string.IsNullOrWhiteSpace(item.IconPath); } if (changed) { repository.Save(document); RenderItems(); } }
         private void RenderWorkspaceTabs()
         {

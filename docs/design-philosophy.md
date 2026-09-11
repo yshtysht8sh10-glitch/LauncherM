@@ -72,6 +72,8 @@ Contextは必要な場合だけ表示し、未対応機能を操作可能に見�
 既存の灰色・ダークグレー・青アクセント、Header、歯車、LaunchItem一覧、右側詳細、Workspace選択、一括起動を維持します。操作経路が重複したHeaderボタンは、対応するタブ・ペイン操作へ集約します。
 保存互換性とTime to Usableを優先し、Generic Context Framework、Plugin System、DI全面導入、Dynamic Property System、JSON Schema駆動UI、Workflow Engineを先行実装しません。
 
+LaunchItemの表示アイコンはユーザーの明示指定を最優先し、未指定ならTargetとWindowsの関連付けから自然なアイコンを自動解決します。Web URLはfavicon、実行ファイル・通常ファイル・フォルダはWindows Shell、URI SchemeはWindows Protocol Associationから解決し、取得不能時はLauncherMの既定表示へ安全に戻します。
+
 ## MVP Scope
 
 候補は、Workspace管理、Launch Item管理、アプリ・ファイル・フォルダ・URL・Commandの起動、Working Directory、個別／一括起動、設定保存です。これは候補であり、現時点の実装済み機能を意味しません。

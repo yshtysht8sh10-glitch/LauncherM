@@ -13,6 +13,7 @@ Last updated: 2026-09-11
 - Chrome/EdgeのBrowser Window Group。一括起動時にBrowser・Profile・Groupごとの新規ウィンドウCLIを構成。個別起動・未指定Groupは通常起動。Default / FirefoxのGroupは未対応。
 - 両Registry ViewのApp Pathsと64/32-bitインストールパスによるブラウザ検出。
 - URL favicon取得・LocalApplicationDataへのキャッシュ、手動IconPath、画像表示。favicon.ico取得失敗時はGoogle favicon serviceへフォールバックする既存動作。
+- LaunchItemの汎用アイコン自動解決。明示IconPathを最優先し、exe／通常ファイル／フォルダはWindows Shell、HTTP(S)は既存favicon、URI SchemeはWindows Protocol AssociationのUserChoice／Scheme登録から`DefaultIcon`またはopen commandのexeを静的に解決。Scheme結果はメモリキャッシュし、失敗時は既定表示へフォールバック。
 - 今回：詳細ペイン・編集ダイアログを「何を開く？ / Target」「何で開く？ / Opener」「どこに開く？ / Destination」に整理。Browser ProfileとWindow Groupを分離し、選択内容による条件表示を実装。
 - 今回：灰色Header・歯車・青ブロック・ダークな左右ペイン・Workspace選択・すべて起動を維持。編集ダイアログにも既存の配色を適用しスクロール可能にした。
 - 今回：Workspace ComboBoxと同じ選択状態を使う横スクロール可能なWorkspaceタブ。相互切替時に選択表示を同期。
@@ -62,6 +63,8 @@ Last updated: 2026-09-11
 Plugin System、Generic Context Framework、Workflow Engineは導入していません。
 
 ## Verified
+
+- 2026-09-11：汎用IconResolver実装後のDebug / Release Build成功、エラー0（各ビルド既存警告14件）。専用チェック12件成功。exe、通常ファイル、フォルダ、明示アイコン優先、HTTPS favicon、未知Scheme／無効TargetのFallback、quoted commandとDefaultIcon解析を確認。このPCの実際の`onenote` Protocol登録からOneNoteアイコンを取得でき、解決処理がURIを起動しないことをコード確認。隔離した作業ディレクトリでRelease版WPFプロセスの起動継続も確認（画面の目視操作は未確認）。
 
 - 2026-09-11：Workspaceタブ並び替え追加後のDebug Build成功、エラー0。XAMLイベント配線と保存処理をコンパイル確認。
 - 2026-09-11：リンク直接追加、カード並び替え、スクロールバーAuto化後のDebug Build成功、エラー0。LaunchItem保存順のJSON往復チェック成功。
@@ -115,6 +118,7 @@ Plugin System、Generic Context Framework、Workflow Engineは導入していま
 - Workspace CloseはApplication / Commandだけが対象。Browser / Explorer / Fileは共有プロセスや既存Windowを巻き込む危険があるため閉じない。LauncherM再起動後はセッション追跡を復元しない。
 - Applicationが単一インスタンスへ処理を引き渡して起動Processが直ちに終了した場合、その既存インスタンスは閉じない。強制終了時の未保存データ保護は各アプリの通常終了応答に依存する。
 - 非標準user-data root、portable版、削除済みProfile等の自動管理は未対応。
+- Microsoft Store / Packaged Appの間接リソース（`@{...}`等）からのアイコン抽出は未対応。Protocol登録から通常のDefaultIconまたはexeを得られない場合は既定表示へフォールバックする。
 - Repositoryはatomic write、バックアップ、破損JSON復旧に未対応。
 - de.txt移行は所属・タイトル・パスのみ。旧icon / memo / visual / PathFileSelectは元ファイルに残り、JSONへ完全移行しない。旧Orderによる並べ替えもない。
 - 旧コードには環境固有の絶対パスが残存。
