@@ -43,6 +43,7 @@ namespace LauncherM
         private bool cancellingInlineRename;
         private readonly Dictionary<FrameworkElement, double> originalFontSizes = new Dictionary<FrameworkElement, double>();
         private Color accentColor = Color.FromRgb(101, 181, 255);
+        private double cardScale = 1;
         public WorkspaceWindow()
         {
             InitializeComponent();
@@ -52,6 +53,7 @@ namespace LauncherM
             string basePath = Directory.GetCurrentDirectory();
             repository = new WorkspaceRepository(Path.Combine(basePath, "workspaces.json"));
             document = repository.LoadOrMigrate(Path.Combine(basePath, "de.txt"));
+            cardScale = Properties.Settings.Default.CardScale; if (cardScale < .6 || cardScale > 1.8) cardScale = 1;
             workspaceBox.ItemsSource = document.Workspaces;
             workspaceBox.IsEditable = true;
             workspaceBox.IsReadOnly = true;
@@ -157,13 +159,34 @@ namespace LauncherM
         private void DeleteWorkspace(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null || document.Workspaces.Count <= 1) return; if (sessions.ActiveCount(workspace.Id) > 0) { MessageBox.Show("このWorkspaceには起動中の追跡対象があります。先に「すべて閉じる」を実行してください。", "Workspaceを削除できません"); return; } if (MessageBox.Show("選択中のWorkspaceを削除しますか？", "確認", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return; int index = workspaceBox.SelectedIndex; document.Workspaces.Remove(workspace); repository.Save(document); workspaceBox.Items.Refresh(); RenderWorkspaceTabs(); workspaceBox.SelectedIndex = Math.Min(index, document.Workspaces.Count - 1); }
         private void ToggleShowAllWorkspaces(object sender, RoutedEventArgs e) { showAllWorkspaces = !showAllWorkspaces; updatingWorkspaceDisplay = true; workspaceBox.Text = showAllWorkspaces ? "全Workspace" : (workspaceBox.SelectedItem is Workspace workspace ? workspace.Name : ""); updatingWorkspaceDisplay = false; RenderItems(); }
         private void RenderItems() { itemsPanel.Children.Clear(); itemTiles.Clear(); selectedItems.Clear(); if (showAllWorkspaces) { ClearDetails(); foreach (Workspace workspace in document.Workspaces) foreach (LaunchItem item in workspace.LaunchItems) AddTile(item); } else { WorkspaceChanged(null, null); } }
-        private void AddTile(LaunchItem item) { StackPanel content = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center }; content.Children.Add(new Image { Source = GetItemIcon(item), Width = 42, Height = 42, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center }); content.Children.Add(new TextBlock { Text = item.Name, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap }); Button tile = new Button { Content = content, Tag = item, Style = (Style)FindResource("TileStyle"), AllowDrop = true, ToolTip = "ドラッグして並び替え" }; tile.Click += SelectItem; tile.MouseDoubleClick += OpenItemByDoubleClick; tile.MouseRightButtonDown += SelectItemForContextMenu; tile.PreviewMouseLeftButtonDown += ItemTileMouseDown; tile.PreviewMouseMove += ItemTileMouseMove; tile.DragOver += ItemTileDragOver; tile.Drop += ItemTileDrop; tile.ContextMenu = CreateItemContextMenu(); itemTiles[item] = tile; itemsPanel.Children.Add(tile); }
+        private void AddTile(LaunchItem item) { StackPanel content = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center }; content.Children.Add(new Image { Source = GetItemIcon(item), Width = 42 * cardScale, Height = 42 * cardScale, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center }); content.Children.Add(new TextBlock { Text = item.Name, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap }); Button tile = new Button { Content = content, Tag = item, Style = (Style)FindResource("TileStyle"), Width = 154 * cardScale, Height = 142 * cardScale, AllowDrop = true, ToolTip = "ドラッグして並び替え" }; tile.Click += SelectItem; tile.MouseDoubleClick += OpenItemByDoubleClick; tile.MouseRightButtonDown += SelectItemForContextMenu; tile.PreviewMouseLeftButtonDown += ItemTileMouseDown; tile.PreviewMouseMove += ItemTileMouseMove; tile.DragOver += ItemTileDragOver; tile.Drop += ItemTileDrop; tile.ContextMenu = CreateItemContextMenu(); itemTiles[item] = tile; itemsPanel.Children.Add(tile); }
         private static Button FindButtonByContent(DependencyObject root, string content) { for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++) { DependencyObject child = VisualTreeHelper.GetChild(root, i); Button button = child as Button; if (button != null && button.Content as string == content) return button; Button found = FindButtonByContent(child, content); if (found != null) return found; } return null; }
         private static string Prompt(string title, string initial) { Window dialog = new Window { Title = title, Width = 360, Height = 130, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize }; StackPanel panel = new StackPanel { Margin = new Thickness(12) }; TextBox input = new TextBox { Text = initial, Margin = new Thickness(0, 0, 0, 10) }; Button ok = new Button { Content = "OK", IsDefault = true, Width = 70, HorizontalAlignment = HorizontalAlignment.Right }; ok.Click += (s, e) => dialog.DialogResult = true; panel.Children.Add(input); panel.Children.Add(ok); dialog.Content = panel; return dialog.ShowDialog() == true ? input.Text : null; }
         private void WindowPreviewKeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Delete && selectedItems.Count > 0) { DeleteSelectedItems(null, null); e.Handled = true; } }
         private void ItemsAreaMouseDown(object sender, MouseButtonEventArgs e) { dragStart = e.GetPosition(itemsDropArea); if (FindTileAt(dragStart) == null) { selectedItems.Clear(); ClearDetails(); UpdateSelectionVisuals(); } }
         private void ItemsAreaMouseMove(object sender, MouseEventArgs e) { if (draggedItem != null || e.LeftButton != MouseButtonState.Pressed) return; Point point = e.GetPosition(itemsDropArea); if ((point - dragStart).Length < 8) return; Button hit = FindTileAt(point); if (hit != null) { LaunchItem item = (LaunchItem)hit.Tag; selectedItems.Add(item); selectedItem = item; UpdateSelectionVisuals(); } }
         private void ItemsAreaMouseUp(object sender, MouseButtonEventArgs e) { }
+        private void ItemsAreaMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            double next = Math.Max(.6, Math.Min(1.8, Math.Round(cardScale + (e.Delta > 0 ? .1 : -.1), 1)));
+            if (Math.Abs(next - cardScale) < .001) { e.Handled = true; return; }
+            cardScale = next; Properties.Settings.Default.CardScale = cardScale;
+            foreach (Button tile in itemTiles.Values) AnimateCardSize(tile);
+            e.Handled = true;
+        }
+        private void AnimateCardSize(Button tile)
+        {
+            AnimateSize(tile, FrameworkElement.WidthProperty, 154 * cardScale); AnimateSize(tile, FrameworkElement.HeightProperty, 142 * cardScale);
+            var content = tile.Content as StackPanel; var image = content != null && content.Children.Count > 0 ? content.Children[0] as Image : null;
+            if (image != null) { AnimateSize(image, FrameworkElement.WidthProperty, 42 * cardScale); AnimateSize(image, FrameworkElement.HeightProperty, 42 * cardScale); }
+        }
+        private static void AnimateSize(FrameworkElement element, DependencyProperty property, double target)
+        {
+            double current = property == FrameworkElement.WidthProperty ? element.ActualWidth : element.ActualHeight;
+            element.SetValue(property, target);
+            var animation = new DoubleAnimation(current, target, TimeSpan.FromMilliseconds(140)) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } };
+            animation.Completed += (s, e) => element.BeginAnimation(property, null); element.BeginAnimation(property, animation);
+        }
         private Button FindTileAt(Point point) { foreach (Button tile in itemTiles.Values) { Point topLeft = tile.TranslatePoint(new Point(0, 0), itemsDropArea); if (new Rect(topLeft, tile.RenderSize).Contains(point)) return tile; } return null; }
         private void UpdateSelectionVisuals() { ShowDetails(); foreach (KeyValuePair<LaunchItem, Button> pair in itemTiles) { bool isActive = selectedItem == pair.Key; bool isSelected = selectedItems.Contains(pair.Key); pair.Value.BorderBrush = isActive || isSelected ? new SolidColorBrush(accentColor) : new SolidColorBrush(Color.FromRgb(80, 80, 80)); pair.Value.BorderThickness = isActive ? new Thickness(4) : (isSelected ? new Thickness(3) : new Thickness(1)); pair.Value.Background = isActive ? new SolidColorBrush(Darken(accentColor, .42)) : (isSelected ? new SolidColorBrush(Darken(accentColor, .3)) : new SolidColorBrush(Color.FromRgb(58, 58, 58))); } }
         private void LaunchSelected(object sender, RoutedEventArgs e) { if (selectedItem != null) TryLaunch(selectedItem); }
@@ -504,6 +527,7 @@ namespace LauncherM
         {
             Properties.Settings.Default.WorkspacePaneWidth = workspaceColumn.ActualWidth;
             Properties.Settings.Default.DetailsPaneWidth = detailsColumn.ActualWidth;
+            Properties.Settings.Default.CardScale = cardScale;
             Properties.Settings.Default.Save();
         }
         private void ClearDetails() { selectedItem = null; ShowDetails(); openerText.Text = profileText.Text = groupText.Text = destinationText.Text = ""; detailName.Text = "LaunchItemを選択"; detailMemo.Text = typeText.Text = targetText.Text = argumentsText.Text = workingDirectoryText.Text = ""; detailIcon.Source = null; }

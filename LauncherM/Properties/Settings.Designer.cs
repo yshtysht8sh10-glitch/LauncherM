@@ -53,5 +53,10 @@ namespace LauncherM.Properties {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("Dark Blue")]
         public string UiTheme { get { return ((string)(this["UiTheme"])); } set { this["UiTheme"] = value; } }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        public double CardScale { get { return ((double)(this["CardScale"])); } set { this["CardScale"] = value; } }
     }
 }

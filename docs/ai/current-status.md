@@ -23,6 +23,7 @@ Last updated: 2026-09-11
 - 今回：Workspaceタブ列末尾の＋ボタンから既存のWorkspace追加処理を実行。
 - 今回：重複していたHeaderの青ブロック・Workspace ComboBox・一括起動・追加・編集・メニューボタンと、左ペインのWorkspace追加・名称変更ボタンを非表示／撤去。選択はタブ、追加は＋、名称変更はインライン編集へ集約。左ペインの削除は維持。
 - 今回：設定画面からWindowsインストール済みフォント、全体文字サイズ（80～150%）、テーマカラー（Dark Blue / Green / Purple / Orange / Light）を変更。適用・保存・次回起動時復元に対応。
+- 今回：LaunchItem一覧上のマウスホイールでカードとアイコンを60～180%に拡大縮小。文字サイズを維持し、アニメーションと次回起動時のサイズ復元に対応。
 - 今回：左ペインの青いWorkspace名をクリックしてインライン編集。Enter／フォーカス移動で保存、Escでキャンセルし、タブとComboBoxへ同期。
 - 今回：左Workspace操作、中央LaunchItem一覧、右LaunchItem詳細の3ペイン。2本のGridSplitter、各ペインのMinWidth、左右幅の終了時保存と次回復元。
 - 今回：Workspace Lifecycle（Launch / Track / Close）。Application / Commandの起動ProcessをWorkspace ID・LaunchItem ID別にメモリ追跡し、通常終了要求後に残存Processを終了。Commandは追跡PIDのProcess Treeを停止。
@@ -58,6 +59,7 @@ Plugin System、Generic Context Framework、Workflow Engineは導入していま
 - 2026-09-11：Workspaceタブ末尾の＋ボタン追加後のDebug Build成功、エラー0。既存AddWorkspaceイベントとの配線をコンパイル確認。
 - 2026-09-11：重複操作ボタン整理後のDebug Build成功、エラー0。非表示ComboBoxによる単一選択状態とタブ同期のイベント配線をコンパイル確認。
 - 2026-09-11：外観設定実装後のDebug Build成功、エラー0。ユーザー設定プロパティ、設定画面イベント、Workspace画面への再適用をコンパイル確認。実画面での全組合せ確認は未実施。
+- 2026-09-11：カードのホイール拡大縮小実装後のDebug Build成功、エラー0。サイズ範囲、文字サイズ非変更、CardScale保存処理をコード確認。実ホイール操作は未確認。
 
 - Visual Studio 2022 Community MSBuild 17.14：変更後のDebug Build成功、エラー0。既存コード由来の警告14件。
 - `tests/WorkspaceLifecycleChecks.cs`：7チェック成功。Commandは追跡対象、Browserは除外、追跡Command Treeの停止、同時に起動した無関係Processの生存、終了後のセッション再利用を実Processで確認。
