@@ -9,6 +9,9 @@ using System.Collections.Generic;
 using System.Windows.Input;
 using System.Threading.Tasks;
 using System.ComponentModel;
+using System.Windows.Documents;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Effects;
 using LauncherM.Application;
 using LauncherM.Domain;
 using LauncherM.Infrastructure;
@@ -31,6 +34,11 @@ namespace LauncherM
         private Workspace draggedWorkspace;
         private Point itemDragStart;
         private LaunchItem draggedItem;
+        private DragPreviewAdorner dragPreview;
+        private AdornerLayer dragPreviewLayer;
+        private FrameworkElement dragSourceElement;
+        private FrameworkElement reorderHintElement;
+        private double reorderHintOffset;
         public WorkspaceWindow()
         {
             InitializeComponent();
@@ -68,9 +76,12 @@ namespace LauncherM
             Point current = e.GetPosition(itemsPanel);
             if (Math.Abs(current.X - itemDragStart.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(current.Y - itemDragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
             LaunchItem source = draggedItem; draggedItem = null;
-            DragDrop.DoDragDrop((DependencyObject)sender, new DataObject(typeof(LaunchItem), source), DragDropEffects.Move);
+            BeginDragVisual(itemsDropArea, (FrameworkElement)sender);
+            UpdateDragVisual(e.GetPosition(itemsDropArea));
+            try { DragDrop.DoDragDrop((DependencyObject)sender, new DataObject(typeof(LaunchItem), source), DragDropEffects.Move); }
+            finally { EndDragVisual(); }
         }
-        private void ItemTileDragOver(object sender, DragEventArgs e) { if (!e.Data.GetDataPresent(typeof(LaunchItem))) return; e.Effects = !showAllWorkspaces ? DragDropEffects.Move : DragDropEffects.None; e.Handled = true; }
+        private void ItemTileDragOver(object sender, DragEventArgs e) { if (!e.Data.GetDataPresent(typeof(LaunchItem))) return; e.Effects = !showAllWorkspaces ? DragDropEffects.Move : DragDropEffects.None; Button target = (Button)sender; Point point = e.GetPosition(target); ShowReorderHint(target, point.X >= target.ActualWidth / 2); UpdateDragVisual(e.GetPosition(itemsDropArea)); e.Handled = true; }
         private void ItemTileDrop(object sender, DragEventArgs e)
         {
             if (!e.Data.GetDataPresent(typeof(LaunchItem))) return;
@@ -79,7 +90,7 @@ namespace LauncherM
             Button targetTile = (Button)sender; bool insertAfter = e.GetPosition(targetTile).X >= targetTile.ActualWidth / 2;
             MoveLaunchItem(source, target, insertAfter); e.Handled = true;
         }
-        private void ItemsPanelDragOver(object sender, DragEventArgs e) { if (!e.Data.GetDataPresent(typeof(LaunchItem))) return; e.Effects = !showAllWorkspaces ? DragDropEffects.Move : DragDropEffects.None; e.Handled = true; }
+        private void ItemsPanelDragOver(object sender, DragEventArgs e) { if (!e.Data.GetDataPresent(typeof(LaunchItem))) return; e.Effects = !showAllWorkspaces ? DragDropEffects.Move : DragDropEffects.None; ClearReorderHint(); UpdateDragVisual(e.GetPosition(itemsDropArea)); e.Handled = true; }
         private void ItemsPanelDrop(object sender, DragEventArgs e)
         {
             if (!e.Data.GetDataPresent(typeof(LaunchItem))) return;
@@ -310,11 +321,17 @@ namespace LauncherM
             if (Math.Abs(current.X - workspaceTabDragStart.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(current.Y - workspaceTabDragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
             Workspace source = draggedWorkspace;
             draggedWorkspace = null;
-            DragDrop.DoDragDrop((DependencyObject)sender, new DataObject(typeof(Workspace), source), DragDropEffects.Move);
+            BeginDragVisual(workspaceTabs, (FrameworkElement)sender);
+            UpdateDragVisual(e.GetPosition(workspaceTabs));
+            try { DragDrop.DoDragDrop((DependencyObject)sender, new DataObject(typeof(Workspace), source), DragDropEffects.Move); }
+            finally { EndDragVisual(); }
         }
         private void WorkspaceTabDragOver(object sender, DragEventArgs e)
         {
             e.Effects = e.Data.GetDataPresent(typeof(Workspace)) ? DragDropEffects.Move : DragDropEffects.None;
+            var target = (System.Windows.Controls.Primitives.ToggleButton)sender;
+            ShowReorderHint(target, e.GetPosition(target).X >= target.ActualWidth / 2);
+            UpdateDragVisual(e.GetPosition(workspaceTabs));
             e.Handled = true;
         }
         private void WorkspaceTabDrop(object sender, DragEventArgs e)
@@ -330,6 +347,8 @@ namespace LauncherM
         private void WorkspaceTabsDragOver(object sender, DragEventArgs e)
         {
             e.Effects = e.Data.GetDataPresent(typeof(Workspace)) ? DragDropEffects.Move : DragDropEffects.None;
+            ClearReorderHint();
+            UpdateDragVisual(e.GetPosition(workspaceTabs));
             e.Handled = true;
         }
         private void WorkspaceTabsDrop(object sender, DragEventArgs e)
@@ -355,6 +374,49 @@ namespace LauncherM
             workspaceBox.SelectedItem = selectedWorkspace;
             RenderWorkspaceTabs();
         }
+        private void BeginDragVisual(UIElement host, FrameworkElement source)
+        {
+            EndDragVisual();
+            if (source.ActualWidth <= 0 || source.ActualHeight <= 0) return;
+            var bitmap = new RenderTargetBitmap((int)Math.Ceiling(source.ActualWidth), (int)Math.Ceiling(source.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(source);
+            AdornerLayer layer = AdornerLayer.GetAdornerLayer(host);
+            if (layer == null) return;
+            dragPreviewLayer = layer;
+            dragSourceElement = source;
+            source.Opacity = 0.38;
+            source.Effect = new DropShadowEffect { Color = Color.FromRgb(101, 181, 255), BlurRadius = 14, ShadowDepth = 0, Opacity = 0.8 };
+            dragPreview = new DragPreviewAdorner(host, new ImageBrush(bitmap), source.ActualWidth, source.ActualHeight);
+            layer.Add(dragPreview);
+        }
+        private void UpdateDragVisual(Point point) { if (dragPreview != null) dragPreview.Update(point); }
+        private void EndDragVisual()
+        {
+            ClearReorderHint();
+            if (dragSourceElement != null) { dragSourceElement.Opacity = 1; dragSourceElement.Effect = null; dragSourceElement = null; }
+            if (dragPreview == null) return;
+            if (dragPreviewLayer != null) dragPreviewLayer.Remove(dragPreview); dragPreview = null; dragPreviewLayer = null;
+        }
+        private void ShowReorderHint(FrameworkElement target, bool insertAfter)
+        {
+            if (ReferenceEquals(target, dragSourceElement)) { ClearReorderHint(); return; }
+            double offset = insertAfter ? 18 : -18;
+            if (ReferenceEquals(reorderHintElement, target) && reorderHintOffset == offset) return;
+            ClearReorderHint();
+            reorderHintElement = target; reorderHintOffset = offset;
+            var transform = new TranslateTransform(); target.RenderTransform = transform;
+            transform.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(0, offset, TimeSpan.FromMilliseconds(130)) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } });
+        }
+        private void ClearReorderHint()
+        {
+            FrameworkElement target = reorderHintElement; reorderHintElement = null; reorderHintOffset = 0;
+            if (target == null) return;
+            var transform = target.RenderTransform as TranslateTransform;
+            if (transform == null) return;
+            var animation = new DoubleAnimation(transform.X, 0, TimeSpan.FromMilliseconds(100)) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } };
+            animation.Completed += (s, e) => { if (ReferenceEquals(target.RenderTransform, transform)) target.RenderTransform = Transform.Identity; };
+            transform.BeginAnimation(TranslateTransform.XProperty, animation);
+        }
         private void UpdateWorkspaceTabs()
         {
             Workspace current = workspaceBox.SelectedItem as Workspace;
@@ -376,5 +438,21 @@ namespace LauncherM
             Properties.Settings.Default.Save();
         }
         private void ClearDetails() { selectedItem = null; ShowDetails(); openerText.Text = profileText.Text = groupText.Text = destinationText.Text = ""; detailName.Text = "LaunchItemを選択"; detailMemo.Text = typeText.Text = targetText.Text = argumentsText.Text = workingDirectoryText.Text = ""; detailIcon.Source = null; }
+
+        private sealed class DragPreviewAdorner : Adorner
+        {
+            private readonly Brush preview;
+            private readonly double width;
+            private readonly double height;
+            private Point position;
+            public DragPreviewAdorner(UIElement adornedElement, Brush preview, double width, double height) : base(adornedElement) { this.preview = preview; this.width = width; this.height = height; IsHitTestVisible = false; Opacity = 0.88; }
+            public void Update(Point cursor) { position = new Point(cursor.X - width / 2, cursor.Y - height / 2); InvalidateVisual(); }
+            protected override void OnRender(DrawingContext drawingContext)
+            {
+                var rect = new Rect(position, new Size(width, height));
+                drawingContext.DrawRoundedRectangle(new SolidColorBrush(Color.FromArgb(90, 0, 0, 0)), null, new Rect(rect.X + 7, rect.Y + 9, rect.Width, rect.Height), 5, 5);
+                drawingContext.DrawRoundedRectangle(preview, new Pen(new SolidColorBrush(Color.FromRgb(101, 181, 255)), 2), rect, 5, 5);
+            }
+        }
     }
 }
