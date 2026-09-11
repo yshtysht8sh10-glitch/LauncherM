@@ -28,6 +28,7 @@ Last updated: 2026-09-11
 - 今回：設定コントロールと縦スクロールバーの間へ右余白を追加。起動ショートカットのCheckBox文字色をダーク背景向けの明色へ修正。
 - 今回：LaunchItem一覧上のCtrl＋マウスホイールでカードとアイコンを60～180%に拡大縮小。通常ホイールは一覧スクロールへ渡し、文字サイズを維持したアニメーションと次回起動時のサイズ復元に対応。
 - 今回：通常表示と全Workspace表示のカード領域を表示幅に追従させ、画面幅に応じたカードの折り返しに対応。
+- 今回：LaunchItem一覧上部のリンク追加ボタンと操作案内を横スクロール領域に配置し、横幅不足時だけスクロールバーを表示。
 - 今回：Headerの表示切替ボタンから選択Workspace表示と全Workspace表示を切替。全Workspace表示では左操作ペインを隠し、中央に全Workspaceを見出し・一括起動／終了ボタン・カードの組で表示。
 - 今回：HeaderをLauncherMタイトル、設定、表示切替の順へ整理。機能ボタンは同じ高さに揃え、アイコンの下へ説明文を表示。
 - 今回：設定画面でLauncherM起動ショートカットの有効化、修飾キー、英字／F1～F12を設定。ユーザーのスタートメニューへWindowsショートカットを作成し、アプリ終了中からの起動と無効化時の削除に対応。
@@ -77,6 +78,7 @@ Plugin System、Generic Context Framework、Workflow Engineは導入していま
 - 2026-09-11：設定画面の下部ボタン固定修正後のDebug Build成功、エラー0。可変スクロール領域と固定ボタン行のGrid配置をXAMLコンパイルで確認。実画面サイズ別の確認は未実施。
 - 2026-09-11：カード拡大縮小をCtrl＋ホイールへ変更後のDebug Build成功、エラー0。通常ホイールを未処理のままScrollViewerへ渡す条件分岐をコード確認。実ホイール操作は未確認。
 - 2026-09-11：設定画面の右余白・CheckBox文字色修正後のDebug Build成功、エラー0。MarginとForegroundスタイルをXAMLコンパイルで確認。実画面確認は未実施。
+- 2026-09-11：LaunchItem一覧上部の横スクロール対応後のDebug Build成功、エラー0。Auto表示の横ScrollViewerをXAMLコンパイルで確認。実画面幅別の表示は未確認。
 
 - Visual Studio 2022 Community MSBuild 17.14：変更後のDebug Build成功、エラー0。既存コード由来の警告14件。
 - `tests/WorkspaceLifecycleChecks.cs`：7チェック成功。Commandは追跡対象、Browserは除外、追跡Command Treeの停止、同時に起動した無関係Processの生存、終了後のセッション再利用を実Processで確認。
