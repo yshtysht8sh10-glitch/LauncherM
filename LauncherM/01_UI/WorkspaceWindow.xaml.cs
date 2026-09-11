@@ -41,6 +41,8 @@ namespace LauncherM
         private double reorderHintOffset;
         private Workspace inlineRenameWorkspace;
         private bool cancellingInlineRename;
+        private readonly Dictionary<FrameworkElement, double> originalFontSizes = new Dictionary<FrameworkElement, double>();
+        private Color accentColor = Color.FromRgb(101, 181, 255);
         public WorkspaceWindow()
         {
             InitializeComponent();
@@ -56,6 +58,7 @@ namespace LauncherM
             RenderWorkspaceTabs();
             RestoreSplitterWidths();
             if (document.Workspaces.Count > 0) workspaceBox.SelectedIndex = 0;
+            ApplyAppearance();
             Loaded += async (s, e) => await LoadMissingWebsiteIcons();
         }
         private void WorkspaceChanged(object sender, SelectionChangedEventArgs e)
@@ -67,6 +70,7 @@ namespace LauncherM
             UpdateWorkspaceTabs();
             foreach (LaunchItem item in workspace.LaunchItems) AddTile(item);
             ClearDetails();
+            ApplyAppearance();
         }
         private void SelectItem(object sender, RoutedEventArgs e) { Button tile = (Button)sender; LaunchItem item = (LaunchItem)tile.Tag; if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control) { if (!selectedItems.Add(item)) selectedItems.Remove(item); } else { selectedItems.Clear(); selectedItems.Add(item); } selectedItem = item; UpdateSelectionVisuals(); e.Handled = true; }
         private void SelectItemForContextMenu(object sender, MouseButtonEventArgs e) { Button tile = (Button)sender; LaunchItem item = (LaunchItem)tile.Tag; if (!selectedItems.Contains(item)) { selectedItems.Clear(); selectedItems.Add(item); selectedItem = item; UpdateSelectionVisuals(); } }
@@ -161,7 +165,7 @@ namespace LauncherM
         private void ItemsAreaMouseMove(object sender, MouseEventArgs e) { if (draggedItem != null || e.LeftButton != MouseButtonState.Pressed) return; Point point = e.GetPosition(itemsDropArea); if ((point - dragStart).Length < 8) return; Button hit = FindTileAt(point); if (hit != null) { LaunchItem item = (LaunchItem)hit.Tag; selectedItems.Add(item); selectedItem = item; UpdateSelectionVisuals(); } }
         private void ItemsAreaMouseUp(object sender, MouseButtonEventArgs e) { }
         private Button FindTileAt(Point point) { foreach (Button tile in itemTiles.Values) { Point topLeft = tile.TranslatePoint(new Point(0, 0), itemsDropArea); if (new Rect(topLeft, tile.RenderSize).Contains(point)) return tile; } return null; }
-        private void UpdateSelectionVisuals() { ShowDetails(); foreach (KeyValuePair<LaunchItem, Button> pair in itemTiles) { bool isActive = selectedItem == pair.Key; bool isSelected = selectedItems.Contains(pair.Key); pair.Value.BorderBrush = isActive ? new SolidColorBrush(Color.FromRgb(255, 180, 45)) : (isSelected ? new SolidColorBrush(Color.FromRgb(40, 170, 255)) : new SolidColorBrush(Color.FromRgb(80, 80, 80))); pair.Value.BorderThickness = isActive ? new Thickness(4) : (isSelected ? new Thickness(3) : new Thickness(1)); pair.Value.Background = isActive ? new SolidColorBrush(Color.FromRgb(105, 78, 35)) : (isSelected ? new SolidColorBrush(Color.FromRgb(55, 75, 95)) : new SolidColorBrush(Color.FromRgb(58, 58, 58))); } }
+        private void UpdateSelectionVisuals() { ShowDetails(); foreach (KeyValuePair<LaunchItem, Button> pair in itemTiles) { bool isActive = selectedItem == pair.Key; bool isSelected = selectedItems.Contains(pair.Key); pair.Value.BorderBrush = isActive || isSelected ? new SolidColorBrush(accentColor) : new SolidColorBrush(Color.FromRgb(80, 80, 80)); pair.Value.BorderThickness = isActive ? new Thickness(4) : (isSelected ? new Thickness(3) : new Thickness(1)); pair.Value.Background = isActive ? new SolidColorBrush(Darken(accentColor, .42)) : (isSelected ? new SolidColorBrush(Darken(accentColor, .3)) : new SolidColorBrush(Color.FromRgb(58, 58, 58))); } }
         private void LaunchSelected(object sender, RoutedEventArgs e) { if (selectedItem != null) TryLaunch(selectedItem); }
         private void LaunchAll(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; var failures = launcher.LaunchWorkspace(workspace, (item, process) => sessions.Track(workspace, item, process)); if (failures.Count > 0) MessageBox.Show(string.Join("\n", failures), "起動できなかった項目"); }
         private void TryLaunch(LaunchItem item) { Workspace workspace = workspaceBox.SelectedItem as Workspace; try { Process process = launcher.Launch(item); sessions.Track(workspace, item, process); } catch (Exception ex) { MessageBox.Show(ex.Message, "起動エラー"); } }
@@ -175,7 +179,7 @@ namespace LauncherM
             if (failures.Count > 0) MessageBox.Show(string.Join("\n", failures), "閉じられなかった項目");
         }
         private void OpenSelectedFolder(object sender, RoutedEventArgs e) { if (selectedItem == null || string.IsNullOrWhiteSpace(selectedItem.Target)) return; string path = Directory.Exists(selectedItem.Target) ? selectedItem.Target : Path.GetDirectoryName(selectedItem.Target); if (!string.IsNullOrWhiteSpace(path) && Directory.Exists(path)) Process.Start(new ProcessStartInfo("explorer.exe", "\"" + path + "\"")); }
-        private void OpenSettings(object sender, RoutedEventArgs e) { StructureSettingsEnvironmental settings = new StructureSettingsEnvironmental(); new EnvironmentWindow(ref settings).ShowDialog(); }
+        private void OpenSettings(object sender, RoutedEventArgs e) { StructureSettingsEnvironmental settings = new StructureSettingsEnvironmental(); var window = new EnvironmentWindow(ref settings) { Owner = this }; window.AppearanceChanged += ApplyAppearance; window.ShowDialog(); }
         private async void AddItem(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; LaunchItem item = ShowLaunchItemDialog(null); if (item == null) return; workspace.LaunchItems.Add(item); await EnsureWebsiteIcon(item); repository.Save(document); WorkspaceChanged(null, null); }
         private async void AddLink(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; LaunchItem item = ShowLaunchItemDialog(null, LaunchItemType.Url); if (item == null) return; workspace.LaunchItems.Add(item); await EnsureWebsiteIcon(item); repository.Save(document); WorkspaceChanged(null, null); }
         private async void EditItem(object sender, RoutedEventArgs e) { if (selectedItem == null) return; LaunchItem edited = ShowLaunchItemDialog(selectedItem); if (edited == null) return; selectedItem.Name = edited.Name; selectedItem.Type = edited.Type; selectedItem.Target = edited.Target; selectedItem.Arguments = edited.Arguments; selectedItem.WorkingDirectory = edited.WorkingDirectory; selectedItem.Browser = edited.Browser; selectedItem.BrowserProfile = edited.BrowserProfile; selectedItem.BrowserWindowGroup = edited.BrowserWindowGroup; selectedItem.IconPath = edited.IconPath; await EnsureWebsiteIcon(selectedItem); repository.Save(document); RenderItems(); }
@@ -335,6 +339,7 @@ namespace LauncherM
             addTabButton.Click += AddWorkspace;
             workspaceTabs.Children.Add(addTabButton);
             UpdateWorkspaceTabs();
+            ApplyAppearance();
         }
         private void WorkspaceTabClicked(object sender, RoutedEventArgs e)
         {
@@ -418,8 +423,8 @@ namespace LauncherM
             dragPreviewLayer = layer;
             dragSourceElement = source;
             source.Opacity = 0.38;
-            source.Effect = new DropShadowEffect { Color = Color.FromRgb(101, 181, 255), BlurRadius = 14, ShadowDepth = 0, Opacity = 0.8 };
-            dragPreview = new DragPreviewAdorner(host, new ImageBrush(bitmap), source.ActualWidth, source.ActualHeight);
+            source.Effect = new DropShadowEffect { Color = accentColor, BlurRadius = 14, ShadowDepth = 0, Opacity = 0.8 };
+            dragPreview = new DragPreviewAdorner(host, new ImageBrush(bitmap), source.ActualWidth, source.ActualHeight, accentColor);
             layer.Add(dragPreview);
         }
         private void UpdateDragVisual(Point point) { if (dragPreview != null) dragPreview.Update(point); }
@@ -456,9 +461,40 @@ namespace LauncherM
             foreach (object child in workspaceTabs.Children)
             {
                 var tab = child as System.Windows.Controls.Primitives.ToggleButton;
-                if (tab != null) tab.IsChecked = ReferenceEquals(tab.Tag, current);
+                if (tab != null) { bool selected = ReferenceEquals(tab.Tag, current); tab.IsChecked = selected; tab.Background = new SolidColorBrush(selected ? Darken(accentColor, .55) : Color.FromRgb(58, 58, 58)); tab.BorderBrush = new SolidColorBrush(selected ? accentColor : Color.FromRgb(96, 96, 96)); }
             }
         }
+        private void ApplyAppearance()
+        {
+            string fontName = Properties.Settings.Default.UiFontFamily; double scale = Properties.Settings.Default.UiFontScale; string theme = Properties.Settings.Default.UiTheme;
+            if (string.IsNullOrWhiteSpace(fontName)) fontName = "Segoe UI"; if (scale < .5 || scale > 2) scale = 1;
+            FontFamily = new FontFamily(fontName); ApplyFontScale(this, scale);
+            Brush accent = EnvironmentWindow.ThemeAccent(theme); accentColor = ((SolidColorBrush)accent).Color;
+            bool light = string.Equals(theme, "Light", StringComparison.OrdinalIgnoreCase);
+            Background = new SolidColorBrush(light ? Color.FromRgb(238, 238, 238) : Color.FromRgb(41, 41, 41)); Foreground = new SolidColorBrush(light ? Colors.Black : Color.FromRgb(242, 242, 242));
+            var header = FindAncestor<ScrollViewer>(settingsButton); if (header != null) header.Background = new SolidColorBrush(light ? Color.FromRgb(215, 215, 215) : Color.FromRgb(104, 104, 104));
+            var tabBar = FindAncestor<Border>(workspaceTabs); if (tabBar != null) tabBar.Background = new SolidColorBrush(light ? Color.FromRgb(226, 226, 226) : Color.FromRgb(32, 32, 32));
+            var leftPane = FindAncestor<Border>(workspaceNameText); if (leftPane != null) leftPane.Background = new SolidColorBrush(light ? Color.FromRgb(245, 245, 245) : Color.FromRgb(48, 48, 48));
+            itemsDropArea.Background = new SolidColorBrush(light ? Color.FromRgb(250, 250, 250) : Color.FromRgb(36, 36, 36));
+            var details = FindAncestor<ScrollViewer>(detailName); if (details != null) details.Background = new SolidColorBrush(light ? Color.FromRgb(250, 250, 250) : Color.FromRgb(41, 41, 41));
+            workspaceNameText.Foreground = accent; workspaceNameEditor.Foreground = accent; ApplyThemeToChildren(this, light, accentColor); UpdateWorkspaceTabs(); UpdateSelectionVisuals();
+        }
+        private void ApplyFontScale(DependencyObject root, double scale)
+        {
+            var element = root as FrameworkElement;
+            if (element is Control control) { if (!originalFontSizes.ContainsKey(element)) originalFontSizes[element] = control.FontSize; control.FontSize = originalFontSizes[element] * scale; }
+            else if (element is TextBlock text) { if (!originalFontSizes.ContainsKey(element)) originalFontSizes[element] = text.FontSize; text.FontSize = originalFontSizes[element] * scale; }
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++) ApplyFontScale(VisualTreeHelper.GetChild(root, i), scale);
+        }
+        private void ApplyThemeToChildren(DependencyObject root, bool light, Color accent)
+        {
+            if (root is TextBox box && !ReferenceEquals(box, workspaceNameEditor)) { box.Background = new SolidColorBrush(light ? Colors.White : Color.FromRgb(41, 41, 41)); box.Foreground = new SolidColorBrush(light ? Colors.Black : Color.FromRgb(242, 242, 242)); }
+            if (root is TextBlock text && IsAccent(text.Foreground)) text.Foreground = new SolidColorBrush(accent);
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++) ApplyThemeToChildren(VisualTreeHelper.GetChild(root, i), light, accent);
+        }
+        private static bool IsAccent(Brush brush) { var solid = brush as SolidColorBrush; if (solid == null) return false; Color c = solid.Color; return (c.R == 101 && c.G == 181 && c.B == 255) || (c.R == 83 && c.G == 194 && c.B == 139) || (c.R == 176 && c.G == 126 && c.B == 255) || (c.R == 255 && c.G == 157 && c.B == 76); }
+        private static Color Darken(Color color, double factor) { return Color.FromRgb((byte)(color.R * factor), (byte)(color.G * factor), (byte)(color.B * factor)); }
+        private static T FindAncestor<T>(DependencyObject element) where T : DependencyObject { DependencyObject current = element; while (current != null) { T match = current as T; if (match != null) return match; current = VisualTreeHelper.GetParent(current); } return null; }
         private void RestoreSplitterWidths()
         {
             if (Properties.Settings.Default.WorkspacePaneWidth >= workspaceColumn.MinWidth) workspaceColumn.Width = new GridLength(Properties.Settings.Default.WorkspacePaneWidth);
@@ -477,14 +513,15 @@ namespace LauncherM
             private readonly Brush preview;
             private readonly double width;
             private readonly double height;
+            private readonly Color accent;
             private Point position;
-            public DragPreviewAdorner(UIElement adornedElement, Brush preview, double width, double height) : base(adornedElement) { this.preview = preview; this.width = width; this.height = height; IsHitTestVisible = false; Opacity = 0.88; }
+            public DragPreviewAdorner(UIElement adornedElement, Brush preview, double width, double height, Color accent) : base(adornedElement) { this.preview = preview; this.width = width; this.height = height; this.accent = accent; IsHitTestVisible = false; Opacity = 0.88; }
             public void Update(Point cursor) { position = new Point(cursor.X - width / 2, cursor.Y - height / 2); InvalidateVisual(); }
             protected override void OnRender(DrawingContext drawingContext)
             {
                 var rect = new Rect(position, new Size(width, height));
                 drawingContext.DrawRoundedRectangle(new SolidColorBrush(Color.FromArgb(90, 0, 0, 0)), null, new Rect(rect.X + 7, rect.Y + 9, rect.Width, rect.Height), 5, 5);
-                drawingContext.DrawRoundedRectangle(preview, new Pen(new SolidColorBrush(Color.FromRgb(101, 181, 255)), 2), rect, 5, 5);
+                drawingContext.DrawRoundedRectangle(preview, new Pen(new SolidColorBrush(accent), 2), rect, 5, 5);
             }
         }
     }

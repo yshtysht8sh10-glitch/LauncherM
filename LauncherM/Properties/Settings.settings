@@ -6,5 +6,8 @@
   <Settings>
     <Setting Name="WorkspacePaneWidth" Type="System.Double" Scope="User"><Value Profile="(Default)">220</Value></Setting>
     <Setting Name="DetailsPaneWidth" Type="System.Double" Scope="User"><Value Profile="(Default)">390</Value></Setting>
+    <Setting Name="UiFontFamily" Type="System.String" Scope="User"><Value Profile="(Default)">Segoe UI</Value></Setting>
+    <Setting Name="UiFontScale" Type="System.Double" Scope="User"><Value Profile="(Default)">1</Value></Setting>
+    <Setting Name="UiTheme" Type="System.String" Scope="User"><Value Profile="(Default)">Dark Blue</Value></Setting>
   </Settings>
 </SettingsFile>

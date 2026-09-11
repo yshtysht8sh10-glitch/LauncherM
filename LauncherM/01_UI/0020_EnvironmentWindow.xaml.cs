@@ -1,77 +1,47 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace LauncherM
 {
-
-    /// <summary>
-    /// EnvironmentWindow.xaml の相互作用ロジック
-    /// </summary>
     public partial class EnvironmentWindow : Window
     {
+        public event Action AppearanceChanged;
+        public EnvironmentWindow(ref StructureSettingsEnvironmental settings) { InitializeComponent(); }
 
-        StructureSettingsEnvironmental m_StructureSettingsEnvironmental;    // 環境設定
-        public List<RadioButton> m_RdbuttonQuantityLauncher = new List<RadioButton>();  // ランチャー個数ラジオボタンリスト
-
-
-        /// <summary>
-        /// コンストラクタ
-        /// </summary>
-        public EnvironmentWindow(ref StructureSettingsEnvironmental StructureSettingsEnvironmental)
+        private void WindowLoaded(object sender, RoutedEventArgs e)
         {
-            m_StructureSettingsEnvironmental = StructureSettingsEnvironmental;
-
-            InitializeComponent();
+            var fonts = Fonts.SystemFontFamilies.OrderBy(font => font.Source).ToList(); fontFamilyBox.ItemsSource = fonts;
+            fontFamilyBox.SelectedItem = fonts.FirstOrDefault(font => string.Equals(font.Source, Properties.Settings.Default.UiFontFamily, StringComparison.OrdinalIgnoreCase)) ?? fonts.FirstOrDefault(font => font.Source == "Segoe UI");
+            var sizes = new List<FontSizeChoice> { new FontSizeChoice("80%", .8), new FontSizeChoice("90%", .9), new FontSizeChoice("100%", 1), new FontSizeChoice("110%", 1.1), new FontSizeChoice("125%", 1.25), new FontSizeChoice("150%", 1.5) };
+            fontSizeBox.ItemsSource = sizes; fontSizeBox.SelectedItem = sizes.OrderBy(choice => Math.Abs(choice.Scale - Properties.Settings.Default.UiFontScale)).First();
+            themeBox.ItemsSource = new[] { "Dark Blue", "Dark Green", "Dark Purple", "Dark Orange", "Light" }; themeBox.SelectedItem = Properties.Settings.Default.UiTheme; if (themeBox.SelectedItem == null) themeBox.SelectedIndex = 0;
+            fontFamilyBox.SelectionChanged += (s, args) => UpdatePreview(); fontSizeBox.SelectionChanged += (s, args) => UpdatePreview(); themeBox.SelectionChanged += (s, args) => UpdatePreview(); UpdatePreview();
         }
-
-
-        /// <summary>
-        /// Loadedイベント
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Window_Loaded(object sender, RoutedEventArgs e)
+        private void UpdatePreview()
         {
-
-            //*************************************************
-            // ランチャー個数ラジオボタンリストにランチャーを登録
-            //*************************************************      
-            m_RdbuttonQuantityLauncher.Add(rdbuttonQuantityLauncher01);
-            m_RdbuttonQuantityLauncher.Add(rdbuttonQuantityLauncher02);
-            m_RdbuttonQuantityLauncher.Add(rdbuttonQuantityLauncher03);
-            m_RdbuttonQuantityLauncher.Add(rdbuttonQuantityLauncher04);
-
-
-            //*************************************************
-            // 現在の環境設定を画面に反映
-            //*************************************************   
-
+            var font = fontFamilyBox.SelectedItem as FontFamily; var size = fontSizeBox.SelectedItem as FontSizeChoice; string theme = themeBox.SelectedItem as string;
+            if (font != null) previewText.FontFamily = font; if (size != null) previewText.FontSize = 16 * size.Scale;
+            previewText.Foreground = theme == "Light" ? Brushes.Black : ThemeAccent(theme);
         }
-
-
-        /// <summary>
-        /// Closedイベント
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Window_Closed(object sender, EventArgs e)
+        private void ApplyClick(object sender, RoutedEventArgs e) { SaveAppearance(); }
+        private void OkClick(object sender, RoutedEventArgs e) { SaveAppearance(); DialogResult = true; }
+        private void SaveAppearance()
         {
-
-            //*************************************************
-            // 現在の画面を環境設定に反映
-            //*************************************************   
-
+            var font = fontFamilyBox.SelectedItem as FontFamily; var size = fontSizeBox.SelectedItem as FontSizeChoice;
+            if (font == null || size == null || themeBox.SelectedItem == null) return;
+            Properties.Settings.Default.UiFontFamily = font.Source; Properties.Settings.Default.UiFontScale = size.Scale; Properties.Settings.Default.UiTheme = themeBox.SelectedItem.ToString(); Properties.Settings.Default.Save();
+            AppearanceChanged?.Invoke();
         }
+        internal static Brush ThemeAccent(string theme)
+        {
+            if (theme == "Dark Green") return new SolidColorBrush(Color.FromRgb(83, 194, 139));
+            if (theme == "Dark Purple") return new SolidColorBrush(Color.FromRgb(176, 126, 255));
+            if (theme == "Dark Orange") return new SolidColorBrush(Color.FromRgb(255, 157, 76));
+            return new SolidColorBrush(Color.FromRgb(101, 181, 255));
+        }
+        private sealed class FontSizeChoice { public string Label { get; private set; } public double Scale { get; private set; } public FontSizeChoice(string label, double scale) { Label = label; Scale = scale; } }
     }
 }

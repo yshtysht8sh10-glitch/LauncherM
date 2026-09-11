@@ -38,5 +38,20 @@ namespace LauncherM.Properties {
             get { return ((double)(this["DetailsPaneWidth"])); }
             set { this["DetailsPaneWidth"] = value; }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Segoe UI")]
+        public string UiFontFamily { get { return ((string)(this["UiFontFamily"])); } set { this["UiFontFamily"] = value; } }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        public double UiFontScale { get { return ((double)(this["UiFontScale"])); } set { this["UiFontScale"] = value; } }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Dark Blue")]
+        public string UiTheme { get { return ((string)(this["UiTheme"])); } set { this["UiTheme"] = value; } }
     }
 }
