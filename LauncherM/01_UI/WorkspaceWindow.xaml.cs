@@ -47,7 +47,6 @@ namespace LauncherM
             itemsDropArea.PreviewMouseLeftButtonDown += ItemsAreaMouseDown;
             itemsDropArea.PreviewMouseMove += ItemsAreaMouseMove;
             itemsDropArea.PreviewMouseLeftButtonUp += ItemsAreaMouseUp;
-            Loaded += (s, e) => { Button workspaceMenu = FindButtonByContent(this, "…"); if (workspaceMenu != null) workspaceMenu.Click += WorkspaceMenu; };
             string basePath = Directory.GetCurrentDirectory();
             repository = new WorkspaceRepository(Path.Combine(basePath, "workspaces.json"));
             document = repository.LoadOrMigrate(Path.Combine(basePath, "de.txt"));
