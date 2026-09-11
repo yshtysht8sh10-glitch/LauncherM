@@ -44,7 +44,7 @@ LauncherMはPassword / Cookie / Session / OAuth Tokenを扱わず、認証とロ
 
 HeaderはLauncherMタイトルの右側に、高さを揃えたアイコン上・説明文下の設定ボタンと表示切替ボタンを並べます。
 LaunchItem一覧上部の操作行は、横幅が不足した場合だけ横スクロールバーを表示します。
-タブとカードのドラッグで表示した挿入用の隙間は、親コンテナ側でも同じ挿入位置としてドロップを受け付けます。
+タブとカードのドラッグで表示した挿入用の隙間は、親コンテナの透明な背景をヒットテスト面として使い、同じ挿入位置としてドロップを受け付けます。
 
 詳細ペインと既存編集ダイアログを3セクションで表示。URLだけBrowser選択、明示BrowserだけProfile、Chrome/EdgeだけGroup、Application / Commandだけ引数、Applicationだけ保存済みWorkingDirectoryを表示します。
 WorkingDirectoryは読み取り専用。Target Contextや未対応Destinationの入力欄は作りません。
