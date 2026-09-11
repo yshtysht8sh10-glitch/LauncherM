@@ -332,6 +332,9 @@ namespace LauncherM
                 tab.Drop += WorkspaceTabDrop;
                 workspaceTabs.Children.Add(tab);
             }
+            var addTabButton = new Button { Content = "+", Width = 34, Height = 32, FontSize = 20, FontWeight = FontWeights.Bold, Margin = new Thickness(5, 0, 0, 0), Padding = new Thickness(0), ToolTip = "Workspaceを追加", Background = new SolidColorBrush(Color.FromRgb(48, 48, 48)), BorderBrush = new SolidColorBrush(Color.FromRgb(96, 96, 96)) };
+            addTabButton.Click += AddWorkspace;
+            workspaceTabs.Children.Add(addTabButton);
             UpdateWorkspaceTabs();
         }
         private void WorkspaceTabClicked(object sender, RoutedEventArgs e)

@@ -20,6 +20,7 @@ Last updated: 2026-09-11
 - 今回：中央ペインの「リンクを追加」からURLタイプを初期選択して直接入力可能。LaunchItemカードのドラッグ＆ドロップ並び替えと保存に対応。
 - 今回：LaunchItem一覧と詳細ペインの縦横スクロールバーをAutoにし、各方向で内容が収まる場合は非表示。
 - 今回：WorkspaceタブとLaunchItemカードのドラッグ中に、半透明ゴーストのポインター追従、ドラッグ元の減光と青い発光、挿入先の左右スライド、キャンセル時の復帰アニメーションを表示。
+- 今回：Workspaceタブ列末尾の＋ボタンから既存のWorkspace追加処理を実行。
 - 今回：左ペインの青いWorkspace名をクリックしてインライン編集。Enter／フォーカス移動で保存、Escでキャンセルし、タブとComboBoxへ同期。
 - 今回：左Workspace操作、中央LaunchItem一覧、右LaunchItem詳細の3ペイン。2本のGridSplitter、各ペインのMinWidth、左右幅の終了時保存と次回復元。
 - 今回：Workspace Lifecycle（Launch / Track / Close）。Application / Commandの起動ProcessをWorkspace ID・LaunchItem ID別にメモリ追跡し、通常終了要求後に残存Processを終了。Commandは追跡PIDのProcess Treeを停止。
@@ -52,6 +53,7 @@ Plugin System、Generic Context Framework、Workflow Engineは導入していま
 - 2026-09-11：リンク直接追加、カード並び替え、スクロールバーAuto化後のDebug Build成功、エラー0。LaunchItem保存順のJSON往復チェック成功。
 - 2026-09-11：タブ／カードのドラッグアニメーション追加後のDebug Build成功、エラー0。Adorner生成・破棄とWPF Animationイベント配線をコンパイル確認。実マウス操作による見た目は未確認。
 - 2026-09-11：Workspace名インライン編集追加後のDebug Build成功、エラー0。クリック・Enter・Esc・LostKeyboardFocusのイベント配線をコンパイル確認。
+- 2026-09-11：Workspaceタブ末尾の＋ボタン追加後のDebug Build成功、エラー0。既存AddWorkspaceイベントとの配線をコンパイル確認。
 
 - Visual Studio 2022 Community MSBuild 17.14：変更後のDebug Build成功、エラー0。既存コード由来の警告14件。
 - `tests/WorkspaceLifecycleChecks.cs`：7チェック成功。Commandは追跡対象、Browserは除外、追跡Command Treeの停止、同時に起動した無関係Processの生存、終了後のセッション再利用を実Processで確認。
