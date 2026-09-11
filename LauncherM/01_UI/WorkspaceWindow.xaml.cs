@@ -39,6 +39,8 @@ namespace LauncherM
         private FrameworkElement dragSourceElement;
         private FrameworkElement reorderHintElement;
         private double reorderHintOffset;
+        private Workspace inlineRenameWorkspace;
+        private bool cancellingInlineRename;
         public WorkspaceWindow()
         {
             InitializeComponent();
@@ -119,7 +121,36 @@ namespace LauncherM
         private bool updatingWorkspaceDisplay;
         private static void AddMenuItem(ContextMenu menu, string header, RoutedEventHandler handler) { MenuItem item = new MenuItem { Header = header }; item.Click += handler; menu.Items.Add(item); }
         private void AddWorkspace(object sender, RoutedEventArgs e) { string name = Prompt("Workspace名", "新しいWorkspace"); if (string.IsNullOrWhiteSpace(name)) return; document.Workspaces.Add(new Workspace { Name = name.Trim() }); repository.Save(document); workspaceBox.Items.Refresh(); RenderWorkspaceTabs(); workspaceBox.SelectedIndex = document.Workspaces.Count - 1; }
-        private void RenameWorkspace(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; string name = Prompt("Workspace名を変更", workspace.Name); if (string.IsNullOrWhiteSpace(name)) return; workspace.Name = name.Trim(); repository.Save(document); workspaceBox.Items.Refresh(); RenderWorkspaceTabs(); updatingWorkspaceDisplay = true; workspaceBox.Text = workspace.Name; updatingWorkspaceDisplay = false; workspaceNameText.Text = workspace.Name; UpdateWorkspaceTabs(); }
+        private void RenameWorkspace(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; string name = Prompt("Workspace名を変更", workspace.Name); if (string.IsNullOrWhiteSpace(name)) return; SaveWorkspaceName(workspace, name); }
+        private void BeginInlineWorkspaceRename(object sender, MouseButtonEventArgs e)
+        {
+            Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return;
+            inlineRenameWorkspace = workspace; cancellingInlineRename = false; workspaceNameEditor.Text = workspace.Name;
+            workspaceNameText.Visibility = Visibility.Collapsed; workspaceNameEditor.Visibility = Visibility.Visible;
+            workspaceNameEditor.Focus(); workspaceNameEditor.SelectAll(); e.Handled = true;
+        }
+        private void InlineWorkspaceNameKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter) { FinishInlineWorkspaceRename(true); e.Handled = true; }
+            else if (e.Key == Key.Escape) { cancellingInlineRename = true; FinishInlineWorkspaceRename(false); e.Handled = true; }
+        }
+        private void InlineWorkspaceNameLostFocus(object sender, KeyboardFocusChangedEventArgs e) { if (workspaceNameEditor.Visibility == Visibility.Visible) FinishInlineWorkspaceRename(!cancellingInlineRename); }
+        private void FinishInlineWorkspaceRename(bool save)
+        {
+            Workspace workspace = inlineRenameWorkspace; inlineRenameWorkspace = null;
+            string name = workspaceNameEditor.Text;
+            workspaceNameEditor.Visibility = Visibility.Collapsed; workspaceNameText.Visibility = Visibility.Visible;
+            if (save && workspace != null && !string.IsNullOrWhiteSpace(name)) SaveWorkspaceName(workspace, name);
+            else if (workspace != null && ReferenceEquals(workspaceBox.SelectedItem, workspace)) workspaceNameText.Text = workspace.Name;
+            cancellingInlineRename = false;
+        }
+        private void SaveWorkspaceName(Workspace workspace, string name)
+        {
+            workspace.Name = name.Trim(); repository.Save(document); workspaceBox.Items.Refresh(); RenderWorkspaceTabs();
+            updatingWorkspaceDisplay = true; workspaceBox.Text = workspace.Name; updatingWorkspaceDisplay = false;
+            if (ReferenceEquals(workspaceBox.SelectedItem, workspace)) workspaceNameText.Text = workspace.Name;
+            UpdateWorkspaceTabs();
+        }
         private void DeleteWorkspace(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null || document.Workspaces.Count <= 1) return; if (sessions.ActiveCount(workspace.Id) > 0) { MessageBox.Show("このWorkspaceには起動中の追跡対象があります。先に「すべて閉じる」を実行してください。", "Workspaceを削除できません"); return; } if (MessageBox.Show("選択中のWorkspaceを削除しますか？", "確認", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return; int index = workspaceBox.SelectedIndex; document.Workspaces.Remove(workspace); repository.Save(document); workspaceBox.Items.Refresh(); RenderWorkspaceTabs(); workspaceBox.SelectedIndex = Math.Min(index, document.Workspaces.Count - 1); }
         private void ToggleShowAllWorkspaces(object sender, RoutedEventArgs e) { showAllWorkspaces = !showAllWorkspaces; updatingWorkspaceDisplay = true; workspaceBox.Text = showAllWorkspaces ? "全Workspace" : (workspaceBox.SelectedItem is Workspace workspace ? workspace.Name : ""); updatingWorkspaceDisplay = false; RenderItems(); }
         private void RenderItems() { itemsPanel.Children.Clear(); itemTiles.Clear(); selectedItems.Clear(); if (showAllWorkspaces) { ClearDetails(); foreach (Workspace workspace in document.Workspaces) foreach (LaunchItem item in workspace.LaunchItems) AddTile(item); } else { WorkspaceChanged(null, null); } }
