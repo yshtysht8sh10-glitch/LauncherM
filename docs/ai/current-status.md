@@ -18,7 +18,7 @@ Last updated: 2026-09-11
 - 今回：Workspace ComboBoxと同じ選択状態を使う横スクロール可能なWorkspaceタブ。相互切替時に選択表示を同期。
 - 今回：Workspaceタブのドラッグ＆ドロップ並び替え。ドロップ先タブの左右で挿入位置を決め、Workspace一覧とComboBoxへ反映して即保存。
 - 今回：中央ペインの「リンクを追加」からURLタイプを初期選択して直接入力可能。LaunchItemカードのドラッグ＆ドロップ並び替えと保存に対応。
-- 今回：LaunchItem一覧と詳細ペインのスクロールバーをAutoにし、内容が収まる場合は非表示。
+- 今回：LaunchItem一覧と詳細ペインの縦横スクロールバーをAutoにし、各方向で内容が収まる場合は非表示。
 - 今回：左Workspace操作、中央LaunchItem一覧、右LaunchItem詳細の3ペイン。2本のGridSplitter、各ペインのMinWidth、左右幅の終了時保存と次回復元。
 - 今回：Workspace Lifecycle（Launch / Track / Close）。Application / Commandの起動ProcessをWorkspace ID・LaunchItem ID別にメモリ追跡し、通常終了要求後に残存Processを終了。Commandは追跡PIDのProcess Treeを停止。
 
