@@ -25,6 +25,7 @@ Last updated: 2026-09-11
 - 今回：設定画面からWindowsインストール済みフォント、全体文字サイズ（80～150%）、テーマカラー（Dark Blue / Green / Purple / Orange / Light）を変更。適用・保存・次回起動時復元に対応。
 - 今回：LaunchItem一覧上のマウスホイールでカードとアイコンを60～180%に拡大縮小。文字サイズを維持し、アニメーションと次回起動時のサイズ復元に対応。
 - 今回：Headerの表示切替ボタンから選択Workspace表示と全Workspace表示を切替。全Workspace表示では左操作ペインを隠し、中央に全Workspaceを見出し・一括起動／終了ボタン・カードの組で表示。
+- 今回：設定画面でLauncherM起動ショートカットの有効化、修飾キー、英字／F1～F12を設定。ユーザーのスタートメニューへWindowsショートカットを作成し、アプリ終了中からの起動と無効化時の削除に対応。
 - 今回：左ペインの青いWorkspace名をクリックしてインライン編集。Enter／フォーカス移動で保存、Escでキャンセルし、タブとComboBoxへ同期。
 - 今回：左Workspace操作、中央LaunchItem一覧、右LaunchItem詳細の3ペイン。2本のGridSplitter、各ペインのMinWidth、左右幅の終了時保存と次回復元。
 - 今回：Workspace Lifecycle（Launch / Track / Close）。Application / Commandの起動ProcessをWorkspace ID・LaunchItem ID別にメモリ追跡し、通常終了要求後に残存Processを終了。Commandは追跡PIDのProcess Treeを停止。
@@ -62,6 +63,7 @@ Plugin System、Generic Context Framework、Workflow Engineは導入していま
 - 2026-09-11：外観設定実装後のDebug Build成功、エラー0。ユーザー設定プロパティ、設定画面イベント、Workspace画面への再適用をコンパイル確認。実画面での全組合せ確認は未実施。
 - 2026-09-11：カードのホイール拡大縮小実装後のDebug Build成功、エラー0。サイズ範囲、文字サイズ非変更、CardScale保存処理をコード確認。実ホイール操作は未確認。
 - 2026-09-11：全Workspace表示切替実装後のDebug Build成功、エラー0。表示切替、Workspace単位の起動・終了、所属Workspaceへの個別起動追跡のイベント配線をコンパイル確認。実画面操作は未確認。
+- 2026-09-11：起動ショートカット設定実装後のDebug Build成功、エラー0。設定保存、Windowsショートカット作成／削除、起動時リンク先更新の配線をコンパイル確認。実ショートカットキーからの起動は未確認。
 
 - Visual Studio 2022 Community MSBuild 17.14：変更後のDebug Build成功、エラー0。既存コード由来の警告14件。
 - `tests/WorkspaceLifecycleChecks.cs`：7チェック成功。Commandは追跡対象、Browserは除外、追跡Command Treeの停止、同時に起動した無関係Processの生存、終了後のセッション再利用を実Processで確認。

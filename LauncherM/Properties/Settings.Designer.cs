@@ -58,5 +58,20 @@ namespace LauncherM.Properties {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("1")]
         public double CardScale { get { return ((double)(this["CardScale"])); } set { this["CardScale"] = value; } }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool LaunchHotkeyEnabled { get { return ((bool)(this["LaunchHotkeyEnabled"])); } set { this["LaunchHotkeyEnabled"] = value; } }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("CTRL+ALT")]
+        public string LaunchHotkeyModifiers { get { return ((string)(this["LaunchHotkeyModifiers"])); } set { this["LaunchHotkeyModifiers"] = value; } }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("L")]
+        public string LaunchHotkeyKey { get { return ((string)(this["LaunchHotkeyKey"])); } set { this["LaunchHotkeyKey"] = value; } }
     }
 }
