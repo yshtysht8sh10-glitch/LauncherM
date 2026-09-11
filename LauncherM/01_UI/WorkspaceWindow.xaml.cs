@@ -503,7 +503,7 @@ namespace LauncherM
         private void ShowReorderHint(FrameworkElement target, bool insertAfter)
         {
             if (ReferenceEquals(target, dragSourceElement)) { ClearReorderHint(); return; }
-            double offset = insertAfter ? 18 : -18;
+            double offset = insertAfter ? -18 : 18;
             if (ReferenceEquals(reorderHintElement, target) && reorderHintOffset == offset) return;
             ClearReorderHint();
             reorderHintElement = target; reorderHintOffset = offset;
