@@ -38,6 +38,9 @@ class LaunchModelChecks
         var ordered = new WorkspaceDocument(); ordered.Workspaces.Add(second); ordered.Workspaces.Add(first); repo.Save(ordered);
         var reordered = repo.LoadOrMigrate("missing");
         Check(reordered.Workspaces[0].Id == second.Id && reordered.Workspaces[1].Id == first.Id, "workspace tab order persists");
+        second.LaunchItems.Add(new LaunchItem { Name = "B" }); second.LaunchItems.Add(new LaunchItem { Name = "A" }); repo.Save(ordered);
+        var itemOrder = repo.LoadOrMigrate("missing").Workspaces[0].LaunchItems;
+        Check(itemOrder[0].Name == "B" && itemOrder[1].Name == "A", "link card order persists");
         return 0;
     }
 }

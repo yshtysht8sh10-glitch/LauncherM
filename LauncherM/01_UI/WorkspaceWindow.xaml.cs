@@ -29,6 +29,8 @@ namespace LauncherM
         private Point dragStart;
         private Point workspaceTabDragStart;
         private Workspace draggedWorkspace;
+        private Point itemDragStart;
+        private LaunchItem draggedItem;
         public WorkspaceWindow()
         {
             InitializeComponent();
@@ -54,11 +56,49 @@ namespace LauncherM
             itemsPanel.Children.Clear(); itemTiles.Clear(); selectedItems.Clear(); Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return;
             workspaceNameText.Text = workspace.Name;
             UpdateWorkspaceTabs();
-            foreach (LaunchItem item in workspace.LaunchItems) { StackPanel content = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center }; Image image = new Image { Source = GetItemIcon(item), Width = 42, Height = 42, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center }; content.Children.Add(image); content.Children.Add(new TextBlock { Text = item.Name, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap }); Button tile = new Button { Content = content, Tag = item, Style = (Style)FindResource("TileStyle") }; tile.Click += SelectItem; tile.MouseDoubleClick += OpenItemByDoubleClick; tile.MouseRightButtonDown += SelectItemForContextMenu; tile.ContextMenu = CreateItemContextMenu(); itemTiles[item] = tile; itemsPanel.Children.Add(tile); }
+            foreach (LaunchItem item in workspace.LaunchItems) AddTile(item);
             ClearDetails();
         }
         private void SelectItem(object sender, RoutedEventArgs e) { Button tile = (Button)sender; LaunchItem item = (LaunchItem)tile.Tag; if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control) { if (!selectedItems.Add(item)) selectedItems.Remove(item); } else { selectedItems.Clear(); selectedItems.Add(item); } selectedItem = item; UpdateSelectionVisuals(); e.Handled = true; }
         private void SelectItemForContextMenu(object sender, MouseButtonEventArgs e) { Button tile = (Button)sender; LaunchItem item = (LaunchItem)tile.Tag; if (!selectedItems.Contains(item)) { selectedItems.Clear(); selectedItems.Add(item); selectedItem = item; UpdateSelectionVisuals(); } }
+        private void ItemTileMouseDown(object sender, MouseButtonEventArgs e) { draggedItem = ((Button)sender).Tag as LaunchItem; itemDragStart = e.GetPosition(itemsPanel); }
+        private void ItemTileMouseMove(object sender, MouseEventArgs e)
+        {
+            if (showAllWorkspaces || e.LeftButton != MouseButtonState.Pressed || draggedItem == null) return;
+            Point current = e.GetPosition(itemsPanel);
+            if (Math.Abs(current.X - itemDragStart.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(current.Y - itemDragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+            LaunchItem source = draggedItem; draggedItem = null;
+            DragDrop.DoDragDrop((DependencyObject)sender, new DataObject(typeof(LaunchItem), source), DragDropEffects.Move);
+        }
+        private void ItemTileDragOver(object sender, DragEventArgs e) { if (!e.Data.GetDataPresent(typeof(LaunchItem))) return; e.Effects = !showAllWorkspaces ? DragDropEffects.Move : DragDropEffects.None; e.Handled = true; }
+        private void ItemTileDrop(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(typeof(LaunchItem))) return;
+            LaunchItem source = e.Data.GetData(typeof(LaunchItem)) as LaunchItem; LaunchItem target = ((Button)sender).Tag as LaunchItem;
+            if (source == null || target == null || ReferenceEquals(source, target)) { e.Handled = true; return; }
+            Button targetTile = (Button)sender; bool insertAfter = e.GetPosition(targetTile).X >= targetTile.ActualWidth / 2;
+            MoveLaunchItem(source, target, insertAfter); e.Handled = true;
+        }
+        private void ItemsPanelDragOver(object sender, DragEventArgs e) { if (!e.Data.GetDataPresent(typeof(LaunchItem))) return; e.Effects = !showAllWorkspaces ? DragDropEffects.Move : DragDropEffects.None; e.Handled = true; }
+        private void ItemsPanelDrop(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(typeof(LaunchItem))) return;
+            LaunchItem source = e.Data.GetData(typeof(LaunchItem)) as LaunchItem; Workspace workspace = workspaceBox.SelectedItem as Workspace;
+            if (source == null || workspace == null || !workspace.LaunchItems.Remove(source)) return;
+            workspace.LaunchItems.Add(source); SaveLaunchItemOrder(workspace, source); e.Handled = true;
+        }
+        private void MoveLaunchItem(LaunchItem source, LaunchItem target, bool insertAfter)
+        {
+            Workspace workspace = workspaceBox.SelectedItem as Workspace;
+            if (workspace == null || !workspace.LaunchItems.Remove(source)) return;
+            int targetIndex = workspace.LaunchItems.IndexOf(target);
+            workspace.LaunchItems.Insert(targetIndex + (insertAfter ? 1 : 0), source);
+            SaveLaunchItemOrder(workspace, source);
+        }
+        private void SaveLaunchItemOrder(Workspace workspace, LaunchItem activeItem)
+        {
+            repository.Save(document); WorkspaceChanged(null, null); selectedItem = activeItem; selectedItems.Add(activeItem); UpdateSelectionVisuals();
+        }
         private void OpenItemByDoubleClick(object sender, MouseButtonEventArgs e) { LaunchItem item = (LaunchItem)((Button)sender).Tag; selectedItem = item; TryLaunch(item); e.Handled = true; }
         private ContextMenu CreateItemContextMenu() { ContextMenu menu = new ContextMenu(); MenuItem delete = new MenuItem { Header = "削除" }; delete.Click += DeleteSelectedItems; MenuItem icon = new MenuItem { Header = "アイコンを変更" }; icon.Click += ChangeSelectedIcon; menu.Items.Add(delete); menu.Items.Add(icon); return menu; }
         private void DeleteSelectedItems(object sender, RoutedEventArgs e) { if (selectedItems.Count == 0) return; foreach (Workspace workspace in document.Workspaces) foreach (LaunchItem item in new List<LaunchItem>(selectedItems)) workspace.LaunchItems.Remove(item); repository.Save(document); if (showAllWorkspaces) RenderItems(); else WorkspaceChanged(null, null); }
@@ -72,12 +112,12 @@ namespace LauncherM
         private void DeleteWorkspace(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null || document.Workspaces.Count <= 1) return; if (sessions.ActiveCount(workspace.Id) > 0) { MessageBox.Show("このWorkspaceには起動中の追跡対象があります。先に「すべて閉じる」を実行してください。", "Workspaceを削除できません"); return; } if (MessageBox.Show("選択中のWorkspaceを削除しますか？", "確認", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return; int index = workspaceBox.SelectedIndex; document.Workspaces.Remove(workspace); repository.Save(document); workspaceBox.Items.Refresh(); RenderWorkspaceTabs(); workspaceBox.SelectedIndex = Math.Min(index, document.Workspaces.Count - 1); }
         private void ToggleShowAllWorkspaces(object sender, RoutedEventArgs e) { showAllWorkspaces = !showAllWorkspaces; updatingWorkspaceDisplay = true; workspaceBox.Text = showAllWorkspaces ? "全Workspace" : (workspaceBox.SelectedItem is Workspace workspace ? workspace.Name : ""); updatingWorkspaceDisplay = false; RenderItems(); }
         private void RenderItems() { itemsPanel.Children.Clear(); itemTiles.Clear(); selectedItems.Clear(); if (showAllWorkspaces) { ClearDetails(); foreach (Workspace workspace in document.Workspaces) foreach (LaunchItem item in workspace.LaunchItems) AddTile(item); } else { WorkspaceChanged(null, null); } }
-        private void AddTile(LaunchItem item) { StackPanel content = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center }; content.Children.Add(new Image { Source = GetItemIcon(item), Width = 42, Height = 42, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center }); content.Children.Add(new TextBlock { Text = item.Name, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap }); Button tile = new Button { Content = content, Tag = item, Style = (Style)FindResource("TileStyle") }; tile.Click += SelectItem; tile.MouseDoubleClick += OpenItemByDoubleClick; tile.MouseRightButtonDown += SelectItemForContextMenu; tile.ContextMenu = CreateItemContextMenu(); itemTiles[item] = tile; itemsPanel.Children.Add(tile); }
+        private void AddTile(LaunchItem item) { StackPanel content = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center }; content.Children.Add(new Image { Source = GetItemIcon(item), Width = 42, Height = 42, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center }); content.Children.Add(new TextBlock { Text = item.Name, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap }); Button tile = new Button { Content = content, Tag = item, Style = (Style)FindResource("TileStyle"), AllowDrop = true, ToolTip = "ドラッグして並び替え" }; tile.Click += SelectItem; tile.MouseDoubleClick += OpenItemByDoubleClick; tile.MouseRightButtonDown += SelectItemForContextMenu; tile.PreviewMouseLeftButtonDown += ItemTileMouseDown; tile.PreviewMouseMove += ItemTileMouseMove; tile.DragOver += ItemTileDragOver; tile.Drop += ItemTileDrop; tile.ContextMenu = CreateItemContextMenu(); itemTiles[item] = tile; itemsPanel.Children.Add(tile); }
         private static Button FindButtonByContent(DependencyObject root, string content) { for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++) { DependencyObject child = VisualTreeHelper.GetChild(root, i); Button button = child as Button; if (button != null && button.Content as string == content) return button; Button found = FindButtonByContent(child, content); if (found != null) return found; } return null; }
         private static string Prompt(string title, string initial) { Window dialog = new Window { Title = title, Width = 360, Height = 130, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize }; StackPanel panel = new StackPanel { Margin = new Thickness(12) }; TextBox input = new TextBox { Text = initial, Margin = new Thickness(0, 0, 0, 10) }; Button ok = new Button { Content = "OK", IsDefault = true, Width = 70, HorizontalAlignment = HorizontalAlignment.Right }; ok.Click += (s, e) => dialog.DialogResult = true; panel.Children.Add(input); panel.Children.Add(ok); dialog.Content = panel; return dialog.ShowDialog() == true ? input.Text : null; }
         private void WindowPreviewKeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Delete && selectedItems.Count > 0) { DeleteSelectedItems(null, null); e.Handled = true; } }
         private void ItemsAreaMouseDown(object sender, MouseButtonEventArgs e) { dragStart = e.GetPosition(itemsDropArea); if (FindTileAt(dragStart) == null) { selectedItems.Clear(); ClearDetails(); UpdateSelectionVisuals(); } }
-        private void ItemsAreaMouseMove(object sender, MouseEventArgs e) { if (e.LeftButton != MouseButtonState.Pressed) return; Point point = e.GetPosition(itemsDropArea); if ((point - dragStart).Length < 8) return; Button hit = FindTileAt(point); if (hit != null) { LaunchItem item = (LaunchItem)hit.Tag; selectedItems.Add(item); selectedItem = item; UpdateSelectionVisuals(); } }
+        private void ItemsAreaMouseMove(object sender, MouseEventArgs e) { if (draggedItem != null || e.LeftButton != MouseButtonState.Pressed) return; Point point = e.GetPosition(itemsDropArea); if ((point - dragStart).Length < 8) return; Button hit = FindTileAt(point); if (hit != null) { LaunchItem item = (LaunchItem)hit.Tag; selectedItems.Add(item); selectedItem = item; UpdateSelectionVisuals(); } }
         private void ItemsAreaMouseUp(object sender, MouseButtonEventArgs e) { }
         private Button FindTileAt(Point point) { foreach (Button tile in itemTiles.Values) { Point topLeft = tile.TranslatePoint(new Point(0, 0), itemsDropArea); if (new Rect(topLeft, tile.RenderSize).Contains(point)) return tile; } return null; }
         private void UpdateSelectionVisuals() { ShowDetails(); foreach (KeyValuePair<LaunchItem, Button> pair in itemTiles) { bool isActive = selectedItem == pair.Key; bool isSelected = selectedItems.Contains(pair.Key); pair.Value.BorderBrush = isActive ? new SolidColorBrush(Color.FromRgb(255, 180, 45)) : (isSelected ? new SolidColorBrush(Color.FromRgb(40, 170, 255)) : new SolidColorBrush(Color.FromRgb(80, 80, 80))); pair.Value.BorderThickness = isActive ? new Thickness(4) : (isSelected ? new Thickness(3) : new Thickness(1)); pair.Value.Background = isActive ? new SolidColorBrush(Color.FromRgb(105, 78, 35)) : (isSelected ? new SolidColorBrush(Color.FromRgb(55, 75, 95)) : new SolidColorBrush(Color.FromRgb(58, 58, 58))); } }
@@ -96,15 +136,16 @@ namespace LauncherM
         private void OpenSelectedFolder(object sender, RoutedEventArgs e) { if (selectedItem == null || string.IsNullOrWhiteSpace(selectedItem.Target)) return; string path = Directory.Exists(selectedItem.Target) ? selectedItem.Target : Path.GetDirectoryName(selectedItem.Target); if (!string.IsNullOrWhiteSpace(path) && Directory.Exists(path)) Process.Start(new ProcessStartInfo("explorer.exe", "\"" + path + "\"")); }
         private void OpenSettings(object sender, RoutedEventArgs e) { StructureSettingsEnvironmental settings = new StructureSettingsEnvironmental(); new EnvironmentWindow(ref settings).ShowDialog(); }
         private async void AddItem(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; LaunchItem item = ShowLaunchItemDialog(null); if (item == null) return; workspace.LaunchItems.Add(item); await EnsureWebsiteIcon(item); repository.Save(document); WorkspaceChanged(null, null); }
+        private async void AddLink(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; LaunchItem item = ShowLaunchItemDialog(null, LaunchItemType.Url); if (item == null) return; workspace.LaunchItems.Add(item); await EnsureWebsiteIcon(item); repository.Save(document); WorkspaceChanged(null, null); }
         private async void EditItem(object sender, RoutedEventArgs e) { if (selectedItem == null) return; LaunchItem edited = ShowLaunchItemDialog(selectedItem); if (edited == null) return; selectedItem.Name = edited.Name; selectedItem.Type = edited.Type; selectedItem.Target = edited.Target; selectedItem.Arguments = edited.Arguments; selectedItem.WorkingDirectory = edited.WorkingDirectory; selectedItem.Browser = edited.Browser; selectedItem.BrowserProfile = edited.BrowserProfile; selectedItem.BrowserWindowGroup = edited.BrowserWindowGroup; selectedItem.IconPath = edited.IconPath; await EnsureWebsiteIcon(selectedItem); repository.Save(document); RenderItems(); }
-        private LaunchItem ShowLaunchItemDialog(LaunchItem source)
+        private LaunchItem ShowLaunchItemDialog(LaunchItem source, LaunchItemType? initialType = null)
         {
             Window dialog = new Window { Title = source == null ? "LaunchItemを追加" : "LaunchItemを編集", Width = 540, Height = 760, MaxHeight = SystemParameters.WorkArea.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner, Owner = this, Background = Background, Foreground = Foreground };
             dialog.Resources = Resources;
             StackPanel panel = new StackPanel { Margin = new Thickness(18) };
             TextBox name = AddDialogText(panel, "名前", source?.Name ?? "");
             AddDialogSection(panel, "何を開く？ / Target");
-            var type = new ComboBox { ItemsSource = Enum.GetValues(typeof(LaunchItemType)), SelectedItem = source == null ? (object)LaunchItemType.Application : source.Type, Margin = new Thickness(0, 2, 0, 8) };
+            var type = new ComboBox { ItemsSource = Enum.GetValues(typeof(LaunchItemType)), SelectedItem = source == null ? (object)(initialType ?? LaunchItemType.Application) : source.Type, Margin = new Thickness(0, 2, 0, 8) };
             panel.Children.Add(new TextBlock { Text = "対象の種類" }); panel.Children.Add(type);
             TextBox target = AddDialogText(panel, "対象（URL / パス / コマンド）", source?.Target ?? "");
             AddDialogSection(panel, "何で開く？ / Opener");
