@@ -174,14 +174,14 @@ namespace LauncherM
                 if (workspaceColumn.ActualWidth >= 160) workspacePaneWidthBeforeOverview = workspaceColumn.ActualWidth;
                 workspaceColumn.MinWidth = 0; workspaceColumn.Width = new GridLength(0); workspaceSplitterColumn.Width = new GridLength(0);
                 workspacePane.Visibility = Visibility.Collapsed; workspaceSplitter.Visibility = Visibility.Collapsed; itemsToolbar.Visibility = Visibility.Collapsed;
-                itemsPanel.Visibility = Visibility.Collapsed; allWorkspacesPanel.Visibility = Visibility.Visible; displayModeButton.Content = "▣ 現在のWorkspace表示";
+                itemsPanel.Visibility = Visibility.Collapsed; allWorkspacesPanel.Visibility = Visibility.Visible; displayModeText.Text = "現在のWorkspace表示";
                 RenderAllWorkspaces();
             }
             else
             {
                 workspaceColumn.MinWidth = 160; workspaceColumn.Width = new GridLength(Math.Max(160, workspacePaneWidthBeforeOverview)); workspaceSplitterColumn.Width = new GridLength(5);
                 workspacePane.Visibility = Visibility.Visible; workspaceSplitter.Visibility = Visibility.Visible; itemsToolbar.Visibility = Visibility.Visible;
-                itemsPanel.Visibility = Visibility.Visible; allWorkspacesPanel.Visibility = Visibility.Collapsed; displayModeButton.Content = "☷ 全Workspace表示";
+                itemsPanel.Visibility = Visibility.Visible; allWorkspacesPanel.Visibility = Visibility.Collapsed; displayModeText.Text = "全Workspace表示";
                 WorkspaceChanged(null, null);
             }
         }

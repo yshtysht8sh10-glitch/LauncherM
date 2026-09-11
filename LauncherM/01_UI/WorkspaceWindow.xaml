@@ -6,8 +6,11 @@
     <Style TargetType="TextBox"><Setter Property="Background" Value="#292929"/><Setter Property="Foreground" Value="#F2F2F2"/><Setter Property="BorderBrush" Value="#777777"/><Setter Property="Margin" Value="0,2,0,8"/></Style>
   </Window.Resources>
   <DockPanel>
-    <ScrollViewer DockPanel.Dock="Top" Height="58" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Background="#686868"><StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-      <Button x:Name="settingsButton" Content="⚙" FontSize="25" Width="54" Height="44" Click="OpenSettings" ToolTip="設定"/><TextBlock Text="LauncherM" VerticalAlignment="Center" FontSize="20" FontWeight="Bold" Margin="8,0,10,0"/><Button x:Name="displayModeButton" Content="☷ 全Workspace表示" Height="36" Click="ToggleDisplayMode" ToolTip="現在のWorkspace表示と全Workspace表示を切り替え"/><ComboBox x:Name="workspaceBox" Visibility="Collapsed" DisplayMemberPath="Name" SelectionChanged="WorkspaceChanged"/>
+    <ScrollViewer DockPanel.Dock="Top" Height="72" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Background="#686868"><StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+      <TextBlock Text="LauncherM" VerticalAlignment="Center" FontSize="22" FontWeight="Bold" Margin="14,0,18,0"/>
+      <Button x:Name="settingsButton" Width="88" Height="58" Click="OpenSettings" ToolTip="設定"><StackPanel><TextBlock Text="⚙" FontSize="24" HorizontalAlignment="Center" Margin="0"/><TextBlock Text="設定" FontSize="12" HorizontalAlignment="Center" Margin="0"/></StackPanel></Button>
+      <Button x:Name="displayModeButton" Width="130" Height="58" Click="ToggleDisplayMode" ToolTip="現在のWorkspace表示と全Workspace表示を切り替え"><StackPanel><TextBlock Text="☷" FontSize="22" HorizontalAlignment="Center" Margin="0"/><TextBlock x:Name="displayModeText" Text="全Workspace表示" FontSize="12" HorizontalAlignment="Center" Margin="0"/></StackPanel></Button>
+      <ComboBox x:Name="workspaceBox" Visibility="Collapsed" DisplayMemberPath="Name" SelectionChanged="WorkspaceChanged"/>
     </StackPanel></ScrollViewer>
     <Border DockPanel.Dock="Top" Background="#202020" BorderBrush="#4A4A4A" BorderThickness="0,0,0,1" Padding="8,6"><ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"><StackPanel x:Name="workspaceTabs" Orientation="Horizontal" AllowDrop="True" DragOver="WorkspaceTabsDragOver" Drop="WorkspaceTabsDrop"/></ScrollViewer></Border>
     <Grid>
