@@ -210,6 +210,7 @@ namespace LauncherM
         private void ItemsAreaMouseUp(object sender, MouseButtonEventArgs e) { }
         private void ItemsAreaMouseWheel(object sender, MouseWheelEventArgs e)
         {
+            if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control) return;
             double next = Math.Max(.6, Math.Min(1.8, Math.Round(cardScale + (e.Delta > 0 ? .1 : -.1), 1)));
             if (Math.Abs(next - cardScale) < .001) { e.Handled = true; return; }
             cardScale = next; Properties.Settings.Default.CardScale = cardScale;
