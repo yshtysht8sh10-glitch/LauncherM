@@ -99,11 +99,13 @@ namespace LauncherM
             Button targetTile = (Button)sender; bool insertAfter = e.GetPosition(targetTile).X >= targetTile.ActualWidth / 2;
             MoveLaunchItem(source, target, insertAfter); e.Handled = true;
         }
-        private void ItemsPanelDragOver(object sender, DragEventArgs e) { if (!e.Data.GetDataPresent(typeof(LaunchItem))) return; e.Effects = !showAllWorkspaces ? DragDropEffects.Move : DragDropEffects.None; ClearReorderHint(); UpdateDragVisual(e.GetPosition(itemsDropArea)); e.Handled = true; }
+        private void ItemsPanelDragOver(object sender, DragEventArgs e) { if (!e.Data.GetDataPresent(typeof(LaunchItem))) return; e.Effects = !showAllWorkspaces ? DragDropEffects.Move : DragDropEffects.None; if (!IsPointerInReorderGap(itemsPanel, e.GetPosition(itemsPanel))) ClearReorderHint(); UpdateDragVisual(e.GetPosition(itemsDropArea)); e.Handled = true; }
         private void ItemsPanelDrop(object sender, DragEventArgs e)
         {
             if (!e.Data.GetDataPresent(typeof(LaunchItem))) return;
             LaunchItem source = e.Data.GetData(typeof(LaunchItem)) as LaunchItem; Workspace workspace = workspaceBox.SelectedItem as Workspace;
+            Button hintedTile = reorderHintElement as Button;
+            if (source != null && hintedTile != null && IsPointerInReorderGap(itemsPanel, e.GetPosition(itemsPanel))) { MoveLaunchItem(source, hintedTile.Tag as LaunchItem, reorderHintOffset < 0); e.Handled = true; return; }
             if (source == null || workspace == null || !workspace.LaunchItems.Remove(source)) return;
             workspace.LaunchItems.Add(source); SaveLaunchItemOrder(workspace, source); e.Handled = true;
         }
@@ -456,7 +458,7 @@ namespace LauncherM
         private void WorkspaceTabsDragOver(object sender, DragEventArgs e)
         {
             e.Effects = e.Data.GetDataPresent(typeof(Workspace)) ? DragDropEffects.Move : DragDropEffects.None;
-            ClearReorderHint();
+            if (!IsPointerInReorderGap(workspaceTabs, e.GetPosition(workspaceTabs))) ClearReorderHint();
             UpdateDragVisual(e.GetPosition(workspaceTabs));
             e.Handled = true;
         }
@@ -464,6 +466,8 @@ namespace LauncherM
         {
             Workspace source = e.Data.GetData(typeof(Workspace)) as Workspace;
             if (source == null) return;
+            var hintedTab = reorderHintElement as System.Windows.Controls.Primitives.ToggleButton;
+            if (hintedTab != null && IsPointerInReorderGap(workspaceTabs, e.GetPosition(workspaceTabs))) { MoveWorkspace(source, hintedTab.Tag as Workspace, reorderHintOffset < 0); e.Handled = true; return; }
             document.Workspaces.Remove(source);
             document.Workspaces.Add(source);
             SaveWorkspaceOrder(source);
@@ -526,6 +530,16 @@ namespace LauncherM
             var animation = new DoubleAnimation(transform.X, 0, TimeSpan.FromMilliseconds(100)) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } };
             animation.Completed += (s, e) => { if (ReferenceEquals(target.RenderTransform, transform)) target.RenderTransform = Transform.Identity; };
             transform.BeginAnimation(TranslateTransform.XProperty, animation);
+        }
+        private bool IsPointerInReorderGap(FrameworkElement host, Point point)
+        {
+            if (reorderHintElement == null || Math.Abs(reorderHintOffset) < .001) return false;
+            Point visualTopLeft = reorderHintElement.TranslatePoint(new Point(0, 0), host);
+            Rect gap = reorderHintOffset > 0
+                ? new Rect(visualTopLeft.X - reorderHintOffset, visualTopLeft.Y, reorderHintOffset, reorderHintElement.ActualHeight)
+                : new Rect(visualTopLeft.X + reorderHintElement.ActualWidth, visualTopLeft.Y, -reorderHintOffset, reorderHintElement.ActualHeight);
+            gap.Inflate(4, 4);
+            return gap.Contains(point);
         }
         private void UpdateWorkspaceTabs()
         {

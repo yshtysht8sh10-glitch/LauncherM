@@ -21,6 +21,7 @@ Last updated: 2026-09-11
 - 今回：LaunchItem一覧と詳細ペインの縦横スクロールバーをAutoにし、各方向で内容が収まる場合は非表示。
 - 今回：WorkspaceタブとLaunchItemカードのドラッグ中に、半透明ゴーストのポインター追従、ドラッグ元の減光と青い発光、挿入先の左右スライド、キャンセル時の復帰アニメーションを表示。
 - 今回：タブとカードの挿入先アニメーション方向を修正。左へ挿入すると対象が右へ、右へ挿入すると対象が左へ退避し、挿入位置の隙間が広がる表示に変更。
+- 今回：タブとカードの挿入アニメーションで生じた隙間をドロップ領域として判定し、表示された隙間へ直接並べ替えできるよう修正。
 - 今回：Workspaceタブ列末尾の＋ボタンから既存のWorkspace追加処理を実行。
 - 今回：重複していたHeaderの青ブロック・Workspace ComboBox・一括起動・追加・編集・メニューボタンと、左ペインのWorkspace追加・名称変更ボタンを非表示／撤去。選択はタブ、追加は＋、名称変更はインライン編集へ集約。左ペインの削除は維持。
 - 今回：設定画面からWindowsインストール済みフォント、全体文字サイズ（80～150%）、テーマカラー（Dark Blue / Green / Purple / Orange / Light）を変更。適用・保存・次回起動時復元に対応。
@@ -79,6 +80,7 @@ Plugin System、Generic Context Framework、Workflow Engineは導入していま
 - 2026-09-11：カード拡大縮小をCtrl＋ホイールへ変更後のDebug Build成功、エラー0。通常ホイールを未処理のままScrollViewerへ渡す条件分岐をコード確認。実ホイール操作は未確認。
 - 2026-09-11：設定画面の右余白・CheckBox文字色修正後のDebug Build成功、エラー0。MarginとForegroundスタイルをXAMLコンパイルで確認。実画面確認は未実施。
 - 2026-09-11：LaunchItem一覧上部の横スクロール対応後のDebug Build成功、エラー0。Auto表示の横ScrollViewerをXAMLコンパイルで確認。実画面幅別の表示は未確認。
+- 2026-09-11：タブ／カードの挿入隙間ドロップ対応後のDebug Build成功、エラー0。親コンテナ上の隙間判定と既存並び替え処理への接続をコード確認。実ドラッグ操作は未確認。
 
 - Visual Studio 2022 Community MSBuild 17.14：変更後のDebug Build成功、エラー0。既存コード由来の警告14件。
 - `tests/WorkspaceLifecycleChecks.cs`：7チェック成功。Commandは追跡対象、Browserは除外、追跡Command Treeの停止、同時に起動した無関係Processの生存、終了後のセッション再利用を実Processで確認。
