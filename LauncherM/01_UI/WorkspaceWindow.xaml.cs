@@ -142,6 +142,12 @@ namespace LauncherM
             else if (e.Key == Key.Escape) { cancellingInlineRename = true; FinishInlineWorkspaceRename(false); e.Handled = true; }
         }
         private void InlineWorkspaceNameLostFocus(object sender, KeyboardFocusChangedEventArgs e) { if (workspaceNameEditor.Visibility == Visibility.Visible) FinishInlineWorkspaceRename(!cancellingInlineRename); }
+        private void WindowPreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (workspaceNameEditor.Visibility != Visibility.Visible) return;
+            DependencyObject clicked = e.OriginalSource as DependencyObject;
+            if (!ReferenceEquals(FindAncestor<TextBox>(clicked), workspaceNameEditor)) FinishInlineWorkspaceRename(true);
+        }
         private void FinishInlineWorkspaceRename(bool save)
         {
             Workspace workspace = inlineRenameWorkspace; inlineRenameWorkspace = null;

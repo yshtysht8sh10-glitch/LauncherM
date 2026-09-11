@@ -29,6 +29,7 @@ Last updated: 2026-09-11
 - 今回：Headerの表示切替ボタンから選択Workspace表示と全Workspace表示を切替。全Workspace表示では左操作ペインを隠し、中央に全Workspaceを見出し・一括起動／終了ボタン・カードの組で表示。
 - 今回：設定画面でLauncherM起動ショートカットの有効化、修飾キー、英字／F1～F12を設定。ユーザーのスタートメニューへWindowsショートカットを作成し、アプリ終了中からの起動と無効化時の削除に対応。
 - 今回：左ペインの青いWorkspace名をクリックしてインライン編集。Enter／フォーカス移動で保存、Escでキャンセルし、タブとComboBoxへ同期。
+- 今回：Workspace名の編集中に編集テキストボックス以外をクリックした場合、そのクリック先がフォーカス可能かにかかわらず名称を確定して保存。
 - 今回：左Workspace操作、中央LaunchItem一覧、右LaunchItem詳細の3ペイン。2本のGridSplitter、各ペインのMinWidth、左右幅の終了時保存と次回復元。
 - 今回：Workspace Lifecycle（Launch / Track / Close）。Application / Commandの起動ProcessをWorkspace ID・LaunchItem ID別にメモリ追跡し、通常終了要求後に残存Processを終了。Commandは追跡PIDのProcess Treeを停止。
 
@@ -68,6 +69,7 @@ Plugin System、Generic Context Framework、Workflow Engineは導入していま
 - 2026-09-11：起動ショートカット設定実装後のDebug Build成功、エラー0。設定保存、Windowsショートカット作成／削除、起動時リンク先更新の配線をコンパイル確認。実ショートカットキーからの起動は未確認。
 - 2026-09-11：カード折り返し修正後のDebug Build成功、エラー0。通常表示・全Workspace表示のカード領域と表示幅のBindingをXAMLコンパイルで確認。実画面リサイズ操作は未確認。
 - 2026-09-11：タブ／カードの挿入先アニメーション方向修正後のDebug Build成功、エラー0。共通退避処理への適用をコード確認。実ドラッグ操作は未確認。
+- 2026-09-11：Workspace名の編集欄外クリック確定実装後のDebug Build成功、エラー0。Window PreviewMouseDownと既存保存処理の配線をコンパイル確認。実クリック操作は未確認。
 
 - Visual Studio 2022 Community MSBuild 17.14：変更後のDebug Build成功、エラー0。既存コード由来の警告14件。
 - `tests/WorkspaceLifecycleChecks.cs`：7チェック成功。Commandは追跡対象、Browserは除外、追跡Command Treeの停止、同時に起動した無関係Processの生存、終了後のセッション再利用を実Processで確認。
