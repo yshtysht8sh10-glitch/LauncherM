@@ -5,7 +5,7 @@
     <Style TargetType="Button"><Setter Property="Background" Value="#5B5B5B"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#888888"/><Setter Property="Padding" Value="14,6"/><Setter Property="Margin" Value="6,0,0,0"/></Style>
   </Window.Resources>
   <Grid Margin="24">
-    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
       <TextBlock Text="外観" FontSize="26" FontWeight="Bold" Foreground="#65B5FF" Margin="0,0,0,20"/>
       <TextBlock Text="フォント" FontSize="15" FontWeight="Bold"/><ComboBox x:Name="fontFamilyBox" DisplayMemberPath="Source"/>
@@ -22,6 +22,6 @@
       </StackPanel>
       <TextBlock x:Name="hotkeyStatusText" Foreground="#AAAAAA" TextWrapping="Wrap" Margin="0,-8,0,0"/>
     </StackPanel></ScrollViewer>
-    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0"><Button Content="適用" Click="ApplyClick"/><Button Content="OK" Width="72" IsDefault="True" Click="OkClick"/><Button Content="キャンセル" Width="90" IsCancel="True"/></StackPanel>
+    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0"><Button Content="適用" Click="ApplyClick"/><Button Content="OK" Width="72" IsDefault="True" Click="OkClick"/><Button Content="キャンセル" Width="90" IsCancel="True"/></StackPanel>
   </Grid>
 </Window>
