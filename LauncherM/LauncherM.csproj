@@ -40,6 +40,7 @@
     <Compile Include="04_Infrastructure\BrowserProfiles.cs" />
     <Compile Include="04_Infrastructure\WebsiteIconCache.cs" />
     <Compile Include="04_Infrastructure\LauncherShortcutService.cs" />
+    <Compile Include="04_Infrastructure\LauncherConfigurationBackup.cs" />
     <Compile Include="03_Domain\WorkspaceModels.cs" />
     <Compile Include="04_Infrastructure\WorkspaceRepository.cs" />
     <Compile Include="02_Application\LaunchService.cs" />

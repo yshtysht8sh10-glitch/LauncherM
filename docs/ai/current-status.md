@@ -33,6 +33,7 @@ Last updated: 2026-09-11
 - 今回：Headerの表示切替ボタンから選択Workspace表示と全Workspace表示を切替。全Workspace表示では左操作ペインを隠し、中央に全Workspaceを見出し・一括起動／終了ボタン・カードの組で表示。
 - 今回：HeaderをLauncherMタイトル、設定、表示切替の順へ整理。機能ボタンは同じ高さに揃え、アイコンの下へ説明文を表示。
 - 今回：設定画面でLauncherM起動ショートカットの有効化、修飾キー、英字／F1～F12を設定。ユーザーのスタートメニューへWindowsショートカットを作成し、アプリ終了中からの起動と無効化時の削除に対応。
+- 今回：設定画面からWorkspaceと全ユーザー設定をVersion付きJSONへエクスポート／インポート。既定ファイル名へ日時を付与し、インポート内容の検証、置換確認、画面と起動ショートカットへの即時反映に対応。
 - 今回：左ペインの青いWorkspace名をクリックしてインライン編集。Enter／フォーカス移動で保存、Escでキャンセルし、タブとComboBoxへ同期。
 - 今回：Workspace名の編集中に編集テキストボックス以外をクリックした場合、そのクリック先がフォーカス可能かにかかわらず名称を確定して保存。
 - 今回：左Workspace操作、中央LaunchItem一覧、右LaunchItem詳細の3ペイン。2本のGridSplitter、各ペインのMinWidth、左右幅の終了時保存と次回復元。
@@ -82,6 +83,7 @@ Plugin System、Generic Context Framework、Workflow Engineは導入していま
 - 2026-09-11：LaunchItem一覧上部の横スクロール対応後のDebug Build成功、エラー0。Auto表示の横ScrollViewerをXAMLコンパイルで確認。実画面幅別の表示は未確認。
 - 2026-09-11：タブ／カードの挿入隙間ドロップ対応後のDebug Build成功、エラー0。親コンテナ上の隙間判定と既存並び替え処理への接続をコード確認。実ドラッグ操作は未確認。
 - 2026-09-11：挿入隙間がヒットテストされない問題を再修正後のDebug Build成功、エラー0。タブ列・カード列の透明背景とDropイベント配線をXAMLコンパイルで確認。実ドラッグ操作は未確認。
+- 2026-09-11：設定インポート／エクスポート実装後のDebug Build成功、エラー0。Workspace・URLカード・全ユーザー設定を含むJSONの書出し／検証付き読戻し往復チェック成功。ファイル選択ダイアログからの実操作は未確認。
 
 - Visual Studio 2022 Community MSBuild 17.14：変更後のDebug Build成功、エラー0。既存コード由来の警告14件。
 - `tests/WorkspaceLifecycleChecks.cs`：7チェック成功。Commandは追跡対象、Browserは除外、追跡Command Treeの停止、同時に起動した無関係Processの生存、終了後のセッション再利用を実Processで確認。

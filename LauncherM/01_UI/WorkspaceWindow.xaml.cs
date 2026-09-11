@@ -252,7 +252,14 @@ namespace LauncherM
             if (failures.Count > 0) MessageBox.Show(string.Join("\n", failures), "閉じられなかった項目");
         }
         private void OpenSelectedFolder(object sender, RoutedEventArgs e) { if (selectedItem == null || string.IsNullOrWhiteSpace(selectedItem.Target)) return; string path = Directory.Exists(selectedItem.Target) ? selectedItem.Target : Path.GetDirectoryName(selectedItem.Target); if (!string.IsNullOrWhiteSpace(path) && Directory.Exists(path)) Process.Start(new ProcessStartInfo("explorer.exe", "\"" + path + "\"")); }
-        private void OpenSettings(object sender, RoutedEventArgs e) { StructureSettingsEnvironmental settings = new StructureSettingsEnvironmental(); var window = new EnvironmentWindow(ref settings) { Owner = this }; window.AppearanceChanged += ApplyAppearance; window.ShowDialog(); }
+        private void OpenSettings(object sender, RoutedEventArgs e) { StructureSettingsEnvironmental settings = new StructureSettingsEnvironmental(); var window = new EnvironmentWindow(ref settings, document, repository) { Owner = this }; window.AppearanceChanged += ApplyAppearance; window.ConfigurationImported += ApplyImportedConfiguration; window.ShowDialog(); }
+        private void ApplyImportedConfiguration()
+        {
+            cardScale = Properties.Settings.Default.CardScale; if (cardScale < .6 || cardScale > 1.8) cardScale = 1;
+            workspaceBox.Items.Refresh(); RenderWorkspaceTabs(); RestoreSplitterWidths();
+            if (document.Workspaces.Count > 0) workspaceBox.SelectedIndex = 0;
+            RenderItems(); ApplyAppearance();
+        }
         private async void AddItem(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; LaunchItem item = ShowLaunchItemDialog(null); if (item == null) return; workspace.LaunchItems.Add(item); await EnsureWebsiteIcon(item); repository.Save(document); WorkspaceChanged(null, null); }
         private async void AddLink(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; LaunchItem item = ShowLaunchItemDialog(null, LaunchItemType.Url); if (item == null) return; workspace.LaunchItems.Add(item); await EnsureWebsiteIcon(item); repository.Save(document); WorkspaceChanged(null, null); }
         private async void EditItem(object sender, RoutedEventArgs e) { if (selectedItem == null) return; LaunchItem edited = ShowLaunchItemDialog(selectedItem); if (edited == null) return; selectedItem.Name = edited.Name; selectedItem.Type = edited.Type; selectedItem.Target = edited.Target; selectedItem.Arguments = edited.Arguments; selectedItem.WorkingDirectory = edited.WorkingDirectory; selectedItem.Browser = edited.Browser; selectedItem.BrowserProfile = edited.BrowserProfile; selectedItem.BrowserWindowGroup = edited.BrowserWindowGroup; selectedItem.IconPath = edited.IconPath; await EnsureWebsiteIcon(selectedItem); repository.Save(document); RenderItems(); }

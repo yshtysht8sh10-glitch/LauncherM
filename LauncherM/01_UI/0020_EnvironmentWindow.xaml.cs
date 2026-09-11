@@ -4,13 +4,18 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using LauncherM.Infrastructure;
+using LauncherM.Domain;
 
 namespace LauncherM
 {
     public partial class EnvironmentWindow : Window
     {
         public event Action AppearanceChanged;
-        public EnvironmentWindow(ref StructureSettingsEnvironmental settings) { InitializeComponent(); }
+        public event Action ConfigurationImported;
+        private readonly WorkspaceDocument workspaceDocument;
+        private readonly WorkspaceRepository workspaceRepository;
+        public EnvironmentWindow(ref StructureSettingsEnvironmental settings) : this(ref settings, null, null) { }
+        public EnvironmentWindow(ref StructureSettingsEnvironmental settings, WorkspaceDocument document, WorkspaceRepository repository) { workspaceDocument = document; workspaceRepository = repository; InitializeComponent(); }
 
         private void WindowLoaded(object sender, RoutedEventArgs e)
         {
@@ -47,6 +52,34 @@ namespace LauncherM
             AppearanceChanged?.Invoke();
             hotkeyStatusText.Text = enabled ? modifiers + "+" + key + " でLauncherMを起動します。" : "起動ショートカットを無効にしました。";
             return true;
+        }
+        private void ExportConfiguration(object sender, RoutedEventArgs e)
+        {
+            if (workspaceDocument == null) return;
+            var dialog = new Microsoft.Win32.SaveFileDialog { Title = "LauncherM設定をエクスポート", Filter = "LauncherM設定バックアップ (*.json)|*.json", FileName = "LauncherM設定_" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".json", AddExtension = true, DefaultExt = ".json" };
+            if (dialog.ShowDialog(this) != true) return;
+            try { LauncherConfigurationBackup.Save(dialog.FileName, LauncherConfigurationBackup.Create(workspaceDocument)); backupStatusText.Text = "エクスポートしました: " + dialog.FileName; }
+            catch (Exception ex) { backupStatusText.Text = "エクスポートできませんでした: " + ex.Message; MessageBox.Show(ex.Message, "エクスポートエラー"); }
+        }
+        private void ImportConfiguration(object sender, RoutedEventArgs e)
+        {
+            if (workspaceDocument == null || workspaceRepository == null) return;
+            var dialog = new Microsoft.Win32.OpenFileDialog { Title = "LauncherM設定をインポート", Filter = "LauncherM設定バックアップ (*.json)|*.json" };
+            if (dialog.ShowDialog(this) != true) return;
+            try
+            {
+                LauncherConfigurationBackup backup = LauncherConfigurationBackup.Load(dialog.FileName);
+                if (MessageBox.Show("現在のWorkspaceと設定を、選択したバックアップの内容で置き換えますか？", "設定をインポート", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+                workspaceDocument.Version = backup.WorkspaceDocument.Version;
+                workspaceDocument.Workspaces.Clear(); foreach (Workspace workspace in backup.WorkspaceDocument.Workspaces) workspaceDocument.Workspaces.Add(workspace);
+                workspaceRepository.Save(workspaceDocument); backup.ApplyPreferences();
+                string shortcutError; LauncherShortcutService.Apply(backup.Preferences.LaunchHotkeyEnabled, backup.Preferences.LaunchHotkeyModifiers, backup.Preferences.LaunchHotkeyKey, out shortcutError);
+                ConfigurationImported?.Invoke(); AppearanceChanged?.Invoke();
+                backupStatusText.Text = "インポートしました: " + dialog.FileName;
+                if (!string.IsNullOrWhiteSpace(shortcutError)) MessageBox.Show(shortcutError, "起動ショートカットだけ反映できませんでした");
+                DialogResult = true;
+            }
+            catch (Exception ex) { backupStatusText.Text = "インポートできませんでした: " + ex.Message; MessageBox.Show(ex.Message, "インポートエラー"); }
         }
         internal static Brush ThemeAccent(string theme)
         {

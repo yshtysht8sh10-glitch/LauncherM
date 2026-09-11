@@ -22,6 +22,11 @@
         <StackPanel Width="100"><TextBlock Text="キー" FontSize="15" FontWeight="Bold"/><ComboBox x:Name="hotkeyKeyBox" Width="100"/></StackPanel>
       </StackPanel>
       <TextBlock x:Name="hotkeyStatusText" Foreground="#AAAAAA" TextWrapping="Wrap" Margin="0,-8,0,0"/>
+      <Separator Margin="0,22,0,18"/>
+      <TextBlock Text="設定のインポート／エクスポート" FontSize="26" FontWeight="Bold" Foreground="#65B5FF" Margin="0,0,0,12"/>
+      <TextBlock Text="Workspaceと外観、カードサイズ、ペイン幅、起動ショートカット設定を1つのファイルへ保存します。" Foreground="#CCCCCC" TextWrapping="Wrap"/>
+      <StackPanel Orientation="Horizontal" Margin="0,8,0,8"><Button Content="エクスポート" Click="ExportConfiguration" Margin="0,0,8,0"/><Button Content="インポート" Click="ImportConfiguration" Margin="0"/></StackPanel>
+      <TextBlock x:Name="backupStatusText" Foreground="#AAAAAA" TextWrapping="Wrap"/>
     </StackPanel></ScrollViewer>
     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0"><Button Content="適用" Click="ApplyClick"/><Button Content="OK" Width="72" IsDefault="True" Click="OkClick"/><Button Content="キャンセル" Width="90" IsCancel="True"/></StackPanel>
   </Grid>
