@@ -12,6 +12,7 @@ using System.ComponentModel;
 using System.Windows.Documents;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
+using System.Windows.Data;
 using LauncherM.Application;
 using LauncherM.Domain;
 using LauncherM.Infrastructure;
@@ -189,7 +190,7 @@ namespace LauncherM
                 var launch = new Button { Content = "▶", Tag = workspace, Width = 38, Height = 34, ToolTip = workspace.Name + " をすべて起動" }; launch.Click += LaunchWorkspaceSection;
                 var close = new Button { Content = "■", Tag = workspace, Width = 38, Height = 34, Background = new SolidColorBrush(Color.FromRgb(89, 67, 67)), ToolTip = workspace.Name + " をすべて閉じる" }; close.Click += CloseWorkspaceSection;
                 header.Children.Add(launch); header.Children.Add(close); header.Children.Add(new TextBlock { Text = workspace.Name, FontSize = 22, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(accentColor), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) });
-                var cards = new WrapPanel(); foreach (LaunchItem item in workspace.LaunchItems) AddTile(item, cards);
+                var cards = new WrapPanel(); cards.SetBinding(FrameworkElement.WidthProperty, new Binding("ViewportWidth") { Source = itemsScrollViewer }); foreach (LaunchItem item in workspace.LaunchItems) AddTile(item, cards);
                 section.Children.Add(header); section.Children.Add(cards); section.Children.Add(new Separator { Margin = new Thickness(0, 8, 0, 0) }); allWorkspacesPanel.Children.Add(section);
             }
             ApplyAppearance();
