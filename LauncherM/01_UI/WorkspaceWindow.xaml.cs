@@ -44,6 +44,7 @@ namespace LauncherM
         private readonly Dictionary<FrameworkElement, double> originalFontSizes = new Dictionary<FrameworkElement, double>();
         private Color accentColor = Color.FromRgb(101, 181, 255);
         private double cardScale = 1;
+        private double workspacePaneWidthBeforeOverview = 220;
         public WorkspaceWindow()
         {
             InitializeComponent();
@@ -66,7 +67,7 @@ namespace LauncherM
         private void WorkspaceChanged(object sender, SelectionChangedEventArgs e)
         {
             if (updatingWorkspaceDisplay) return;
-            if (showAllWorkspaces) { showAllWorkspaces = false; workspaceBox.Text = workspaceBox.SelectedItem is Workspace selectedWorkspace ? selectedWorkspace.Name : ""; }
+            if (showAllWorkspaces) { UpdateWorkspaceTabs(); RenderAllWorkspaces(); return; }
             itemsPanel.Children.Clear(); itemTiles.Clear(); selectedItems.Clear(); Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return;
             workspaceNameText.Text = workspace.Name;
             UpdateWorkspaceTabs();
@@ -157,9 +158,43 @@ namespace LauncherM
             UpdateWorkspaceTabs();
         }
         private void DeleteWorkspace(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null || document.Workspaces.Count <= 1) return; if (sessions.ActiveCount(workspace.Id) > 0) { MessageBox.Show("このWorkspaceには起動中の追跡対象があります。先に「すべて閉じる」を実行してください。", "Workspaceを削除できません"); return; } if (MessageBox.Show("選択中のWorkspaceを削除しますか？", "確認", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return; int index = workspaceBox.SelectedIndex; document.Workspaces.Remove(workspace); repository.Save(document); workspaceBox.Items.Refresh(); RenderWorkspaceTabs(); workspaceBox.SelectedIndex = Math.Min(index, document.Workspaces.Count - 1); }
-        private void ToggleShowAllWorkspaces(object sender, RoutedEventArgs e) { showAllWorkspaces = !showAllWorkspaces; updatingWorkspaceDisplay = true; workspaceBox.Text = showAllWorkspaces ? "全Workspace" : (workspaceBox.SelectedItem is Workspace workspace ? workspace.Name : ""); updatingWorkspaceDisplay = false; RenderItems(); }
-        private void RenderItems() { itemsPanel.Children.Clear(); itemTiles.Clear(); selectedItems.Clear(); if (showAllWorkspaces) { ClearDetails(); foreach (Workspace workspace in document.Workspaces) foreach (LaunchItem item in workspace.LaunchItems) AddTile(item); } else { WorkspaceChanged(null, null); } }
-        private void AddTile(LaunchItem item) { StackPanel content = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center }; content.Children.Add(new Image { Source = GetItemIcon(item), Width = 42 * cardScale, Height = 42 * cardScale, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center }); content.Children.Add(new TextBlock { Text = item.Name, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap }); Button tile = new Button { Content = content, Tag = item, Style = (Style)FindResource("TileStyle"), Width = 154 * cardScale, Height = 142 * cardScale, AllowDrop = true, ToolTip = "ドラッグして並び替え" }; tile.Click += SelectItem; tile.MouseDoubleClick += OpenItemByDoubleClick; tile.MouseRightButtonDown += SelectItemForContextMenu; tile.PreviewMouseLeftButtonDown += ItemTileMouseDown; tile.PreviewMouseMove += ItemTileMouseMove; tile.DragOver += ItemTileDragOver; tile.Drop += ItemTileDrop; tile.ContextMenu = CreateItemContextMenu(); itemTiles[item] = tile; itemsPanel.Children.Add(tile); }
+        private void ToggleDisplayMode(object sender, RoutedEventArgs e) { showAllWorkspaces = !showAllWorkspaces; ApplyDisplayMode(); }
+        private void ToggleShowAllWorkspaces(object sender, RoutedEventArgs e) { showAllWorkspaces = !showAllWorkspaces; ApplyDisplayMode(); }
+        private void ApplyDisplayMode()
+        {
+            if (showAllWorkspaces)
+            {
+                if (workspaceColumn.ActualWidth >= 160) workspacePaneWidthBeforeOverview = workspaceColumn.ActualWidth;
+                workspaceColumn.MinWidth = 0; workspaceColumn.Width = new GridLength(0); workspaceSplitterColumn.Width = new GridLength(0);
+                workspacePane.Visibility = Visibility.Collapsed; workspaceSplitter.Visibility = Visibility.Collapsed; itemsToolbar.Visibility = Visibility.Collapsed;
+                itemsPanel.Visibility = Visibility.Collapsed; allWorkspacesPanel.Visibility = Visibility.Visible; displayModeButton.Content = "▣ 現在のWorkspace表示";
+                RenderAllWorkspaces();
+            }
+            else
+            {
+                workspaceColumn.MinWidth = 160; workspaceColumn.Width = new GridLength(Math.Max(160, workspacePaneWidthBeforeOverview)); workspaceSplitterColumn.Width = new GridLength(5);
+                workspacePane.Visibility = Visibility.Visible; workspaceSplitter.Visibility = Visibility.Visible; itemsToolbar.Visibility = Visibility.Visible;
+                itemsPanel.Visibility = Visibility.Visible; allWorkspacesPanel.Visibility = Visibility.Collapsed; displayModeButton.Content = "☷ 全Workspace表示";
+                WorkspaceChanged(null, null);
+            }
+        }
+        private void RenderItems() { if (showAllWorkspaces) RenderAllWorkspaces(); else WorkspaceChanged(null, null); }
+        private void RenderAllWorkspaces()
+        {
+            allWorkspacesPanel.Children.Clear(); itemsPanel.Children.Clear(); itemTiles.Clear(); selectedItems.Clear(); ClearDetails();
+            foreach (Workspace workspace in document.Workspaces)
+            {
+                var section = new StackPanel { Margin = new Thickness(0, 0, 0, 18) };
+                var header = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 6) };
+                var launch = new Button { Content = "▶", Tag = workspace, Width = 38, Height = 34, ToolTip = workspace.Name + " をすべて起動" }; launch.Click += LaunchWorkspaceSection;
+                var close = new Button { Content = "■", Tag = workspace, Width = 38, Height = 34, Background = new SolidColorBrush(Color.FromRgb(89, 67, 67)), ToolTip = workspace.Name + " をすべて閉じる" }; close.Click += CloseWorkspaceSection;
+                header.Children.Add(launch); header.Children.Add(close); header.Children.Add(new TextBlock { Text = workspace.Name, FontSize = 22, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(accentColor), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) });
+                var cards = new WrapPanel(); foreach (LaunchItem item in workspace.LaunchItems) AddTile(item, cards);
+                section.Children.Add(header); section.Children.Add(cards); section.Children.Add(new Separator { Margin = new Thickness(0, 8, 0, 0) }); allWorkspacesPanel.Children.Add(section);
+            }
+            ApplyAppearance();
+        }
+        private void AddTile(LaunchItem item, Panel host = null) { StackPanel content = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center }; content.Children.Add(new Image { Source = GetItemIcon(item), Width = 42 * cardScale, Height = 42 * cardScale, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center }); content.Children.Add(new TextBlock { Text = item.Name, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap }); Button tile = new Button { Content = content, Tag = item, Style = (Style)FindResource("TileStyle"), Width = 154 * cardScale, Height = 142 * cardScale, AllowDrop = true, ToolTip = showAllWorkspaces ? "ダブルクリックで起動" : "ドラッグして並び替え" }; tile.Click += SelectItem; tile.MouseDoubleClick += OpenItemByDoubleClick; tile.MouseRightButtonDown += SelectItemForContextMenu; tile.PreviewMouseLeftButtonDown += ItemTileMouseDown; tile.PreviewMouseMove += ItemTileMouseMove; tile.DragOver += ItemTileDragOver; tile.Drop += ItemTileDrop; tile.ContextMenu = CreateItemContextMenu(); itemTiles[item] = tile; (host ?? itemsPanel).Children.Add(tile); }
         private static Button FindButtonByContent(DependencyObject root, string content) { for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++) { DependencyObject child = VisualTreeHelper.GetChild(root, i); Button button = child as Button; if (button != null && button.Content as string == content) return button; Button found = FindButtonByContent(child, content); if (found != null) return found; } return null; }
         private static string Prompt(string title, string initial) { Window dialog = new Window { Title = title, Width = 360, Height = 130, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize }; StackPanel panel = new StackPanel { Margin = new Thickness(12) }; TextBox input = new TextBox { Text = initial, Margin = new Thickness(0, 0, 0, 10) }; Button ok = new Button { Content = "OK", IsDefault = true, Width = 70, HorizontalAlignment = HorizontalAlignment.Right }; ok.Click += (s, e) => dialog.DialogResult = true; panel.Children.Add(input); panel.Children.Add(ok); dialog.Content = panel; return dialog.ShowDialog() == true ? input.Text : null; }
         private void WindowPreviewKeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Delete && selectedItems.Count > 0) { DeleteSelectedItems(null, null); e.Handled = true; } }
@@ -190,11 +225,16 @@ namespace LauncherM
         private Button FindTileAt(Point point) { foreach (Button tile in itemTiles.Values) { Point topLeft = tile.TranslatePoint(new Point(0, 0), itemsDropArea); if (new Rect(topLeft, tile.RenderSize).Contains(point)) return tile; } return null; }
         private void UpdateSelectionVisuals() { ShowDetails(); foreach (KeyValuePair<LaunchItem, Button> pair in itemTiles) { bool isActive = selectedItem == pair.Key; bool isSelected = selectedItems.Contains(pair.Key); pair.Value.BorderBrush = isActive || isSelected ? new SolidColorBrush(accentColor) : new SolidColorBrush(Color.FromRgb(80, 80, 80)); pair.Value.BorderThickness = isActive ? new Thickness(4) : (isSelected ? new Thickness(3) : new Thickness(1)); pair.Value.Background = isActive ? new SolidColorBrush(Darken(accentColor, .42)) : (isSelected ? new SolidColorBrush(Darken(accentColor, .3)) : new SolidColorBrush(Color.FromRgb(58, 58, 58))); } }
         private void LaunchSelected(object sender, RoutedEventArgs e) { if (selectedItem != null) TryLaunch(selectedItem); }
-        private void LaunchAll(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; var failures = launcher.LaunchWorkspace(workspace, (item, process) => sessions.Track(workspace, item, process)); if (failures.Count > 0) MessageBox.Show(string.Join("\n", failures), "起動できなかった項目"); }
-        private void TryLaunch(LaunchItem item) { Workspace workspace = workspaceBox.SelectedItem as Workspace; try { Process process = launcher.Launch(item); sessions.Track(workspace, item, process); } catch (Exception ex) { MessageBox.Show(ex.Message, "起動エラー"); } }
-        private async void CloseWorkspace(object sender, RoutedEventArgs e)
+        private void LaunchAll(object sender, RoutedEventArgs e) { LaunchWorkspace(workspaceBox.SelectedItem as Workspace); }
+        private void LaunchWorkspaceSection(object sender, RoutedEventArgs e) { LaunchWorkspace(((Button)sender).Tag as Workspace); }
+        private void LaunchWorkspace(Workspace workspace) { if (workspace == null) return; var failures = launcher.LaunchWorkspace(workspace, (item, process) => sessions.Track(workspace, item, process)); if (failures.Count > 0) MessageBox.Show(string.Join("\n", failures), "起動できなかった項目"); }
+        private void TryLaunch(LaunchItem item) { Workspace workspace = FindWorkspace(item); try { Process process = launcher.Launch(item); sessions.Track(workspace, item, process); } catch (Exception ex) { MessageBox.Show(ex.Message, "起動エラー"); } }
+        private Workspace FindWorkspace(LaunchItem item) { foreach (Workspace workspace in document.Workspaces) if (workspace.LaunchItems.Contains(item)) return workspace; return workspaceBox.SelectedItem as Workspace; }
+        private async void CloseWorkspace(object sender, RoutedEventArgs e) { await CloseWorkspaceAsync(workspaceBox.SelectedItem as Workspace); }
+        private async void CloseWorkspaceSection(object sender, RoutedEventArgs e) { await CloseWorkspaceAsync(((Button)sender).Tag as Workspace); }
+        private async Task CloseWorkspaceAsync(Workspace workspace)
         {
-            Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return;
+            if (workspace == null) return;
             int count = sessions.ActiveCount(workspace.Id);
             if (count == 0) { MessageBox.Show("このWorkspaceでLauncherMが追跡している起動中のApplication / Commandはありません。", "Workspaceを閉じる"); return; }
             if (MessageBox.Show(workspace.Name + " から起動した追跡対象 " + count + " 件を閉じますか？", "Workspaceをすべて閉じる", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
@@ -434,6 +474,7 @@ namespace LauncherM
             workspaceBox.Items.Refresh();
             workspaceBox.SelectedItem = selectedWorkspace;
             RenderWorkspaceTabs();
+            if (showAllWorkspaces) RenderAllWorkspaces();
         }
         private void BeginDragVisual(UIElement host, FrameworkElement source)
         {
@@ -520,12 +561,12 @@ namespace LauncherM
         private static T FindAncestor<T>(DependencyObject element) where T : DependencyObject { DependencyObject current = element; while (current != null) { T match = current as T; if (match != null) return match; current = VisualTreeHelper.GetParent(current); } return null; }
         private void RestoreSplitterWidths()
         {
-            if (Properties.Settings.Default.WorkspacePaneWidth >= workspaceColumn.MinWidth) workspaceColumn.Width = new GridLength(Properties.Settings.Default.WorkspacePaneWidth);
+            if (Properties.Settings.Default.WorkspacePaneWidth >= workspaceColumn.MinWidth) { workspaceColumn.Width = new GridLength(Properties.Settings.Default.WorkspacePaneWidth); workspacePaneWidthBeforeOverview = Properties.Settings.Default.WorkspacePaneWidth; }
             if (Properties.Settings.Default.DetailsPaneWidth >= detailsColumn.MinWidth) detailsColumn.Width = new GridLength(Properties.Settings.Default.DetailsPaneWidth);
         }
         private void WindowClosing(object sender, CancelEventArgs e)
         {
-            Properties.Settings.Default.WorkspacePaneWidth = workspaceColumn.ActualWidth;
+            Properties.Settings.Default.WorkspacePaneWidth = showAllWorkspaces ? workspacePaneWidthBeforeOverview : workspaceColumn.ActualWidth;
             Properties.Settings.Default.DetailsPaneWidth = detailsColumn.ActualWidth;
             Properties.Settings.Default.CardScale = cardScale;
             Properties.Settings.Default.Save();
