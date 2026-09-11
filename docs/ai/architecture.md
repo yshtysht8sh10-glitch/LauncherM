@@ -44,7 +44,7 @@ LauncherMはPassword / Cookie / Session / OAuth Tokenを扱わず、認証とロ
 
 詳細ペインと既存編集ダイアログを3セクションで表示。URLだけBrowser選択、明示BrowserだけProfile、Chrome/EdgeだけGroup、Application / Commandだけ引数、Applicationだけ保存済みWorkingDirectoryを表示します。
 WorkingDirectoryは読み取り専用。Target Contextや未対応Destinationの入力欄は作りません。
-灰色Header、歯車、青いブロック群、ダークUI、Workspace選択・すべて起動は維持。ComboBoxを単一の選択状態としてタブを同期し、左Workspace操作・中央LaunchItem一覧・右LaunchItem詳細の3ペインを2本のGridSplitterで区切ります。左右幅はユーザー設定へ保存します。
+灰色Header、歯車、青いブロック群、ダークUI、Workspace選択・すべて起動は維持。ComboBoxを単一の選択状態としてタブを同期し、タブのドラッグ＆ドロップ時はWorkspaceDocumentのリスト順を変更して即保存します。左Workspace操作・中央LaunchItem一覧・右LaunchItem詳細の3ペインを2本のGridSplitterで区切り、左右幅はユーザー設定へ保存します。
 ブロックは現在Opacity切替のみ。設定ウィンドウは一時設定オブジェクトで開き、新UIとの設定保存統合は未完です。
 
 ## 保存互換性と既存制約

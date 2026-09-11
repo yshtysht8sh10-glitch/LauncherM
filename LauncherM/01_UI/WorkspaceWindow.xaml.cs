@@ -27,6 +27,8 @@ namespace LauncherM
         private readonly HashSet<LaunchItem> selectedItems = new HashSet<LaunchItem>();
         private readonly Dictionary<LaunchItem, Button> itemTiles = new Dictionary<LaunchItem, Button>();
         private Point dragStart;
+        private Point workspaceTabDragStart;
+        private Workspace draggedWorkspace;
         public WorkspaceWindow()
         {
             InitializeComponent();
@@ -240,6 +242,11 @@ namespace LauncherM
             {
                 var tab = new System.Windows.Controls.Primitives.ToggleButton { Content = workspace.Name, Tag = workspace, Style = (Style)FindResource("WorkspaceTabStyle") };
                 tab.Click += WorkspaceTabClicked;
+                tab.PreviewMouseLeftButtonDown += WorkspaceTabMouseDown;
+                tab.PreviewMouseMove += WorkspaceTabMouseMove;
+                tab.AllowDrop = true;
+                tab.DragOver += WorkspaceTabDragOver;
+                tab.Drop += WorkspaceTabDrop;
                 workspaceTabs.Children.Add(tab);
             }
             UpdateWorkspaceTabs();
@@ -248,6 +255,64 @@ namespace LauncherM
         {
             Workspace workspace = ((System.Windows.Controls.Primitives.ToggleButton)sender).Tag as Workspace;
             if (workspace != null) workspaceBox.SelectedItem = workspace;
+        }
+        private void WorkspaceTabMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            draggedWorkspace = ((System.Windows.Controls.Primitives.ToggleButton)sender).Tag as Workspace;
+            workspaceTabDragStart = e.GetPosition(workspaceTabs);
+            if (draggedWorkspace != null) workspaceBox.SelectedItem = draggedWorkspace;
+        }
+        private void WorkspaceTabMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed || draggedWorkspace == null) return;
+            Point current = e.GetPosition(workspaceTabs);
+            if (Math.Abs(current.X - workspaceTabDragStart.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(current.Y - workspaceTabDragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+            Workspace source = draggedWorkspace;
+            draggedWorkspace = null;
+            DragDrop.DoDragDrop((DependencyObject)sender, new DataObject(typeof(Workspace), source), DragDropEffects.Move);
+        }
+        private void WorkspaceTabDragOver(object sender, DragEventArgs e)
+        {
+            e.Effects = e.Data.GetDataPresent(typeof(Workspace)) ? DragDropEffects.Move : DragDropEffects.None;
+            e.Handled = true;
+        }
+        private void WorkspaceTabDrop(object sender, DragEventArgs e)
+        {
+            Workspace source = e.Data.GetData(typeof(Workspace)) as Workspace;
+            Workspace target = ((System.Windows.Controls.Primitives.ToggleButton)sender).Tag as Workspace;
+            if (source == null || target == null || ReferenceEquals(source, target)) { e.Handled = true; return; }
+            var targetTab = (System.Windows.Controls.Primitives.ToggleButton)sender;
+            bool insertAfter = e.GetPosition(targetTab).X >= targetTab.ActualWidth / 2;
+            MoveWorkspace(source, target, insertAfter);
+            e.Handled = true;
+        }
+        private void WorkspaceTabsDragOver(object sender, DragEventArgs e)
+        {
+            e.Effects = e.Data.GetDataPresent(typeof(Workspace)) ? DragDropEffects.Move : DragDropEffects.None;
+            e.Handled = true;
+        }
+        private void WorkspaceTabsDrop(object sender, DragEventArgs e)
+        {
+            Workspace source = e.Data.GetData(typeof(Workspace)) as Workspace;
+            if (source == null) return;
+            document.Workspaces.Remove(source);
+            document.Workspaces.Add(source);
+            SaveWorkspaceOrder(source);
+            e.Handled = true;
+        }
+        private void MoveWorkspace(Workspace source, Workspace target, bool insertAfter)
+        {
+            document.Workspaces.Remove(source);
+            int targetIndex = document.Workspaces.IndexOf(target);
+            document.Workspaces.Insert(targetIndex + (insertAfter ? 1 : 0), source);
+            SaveWorkspaceOrder(source);
+        }
+        private void SaveWorkspaceOrder(Workspace selectedWorkspace)
+        {
+            repository.Save(document);
+            workspaceBox.Items.Refresh();
+            workspaceBox.SelectedItem = selectedWorkspace;
+            RenderWorkspaceTabs();
         }
         private void UpdateWorkspaceTabs()
         {

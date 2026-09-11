@@ -67,7 +67,7 @@ WorkingDirectoryはプロセスが相対パスを解決するOpener Contextで�
 ## GUIと実装の原則
 
 右側詳細・編集UIは「何を開く？」「何で開く？」「どこに開く？」を中心に整理します。
-Workspaceの選択はComboBoxと横スクロール可能なタブで同じ選択状態を共有します。メイン領域は左からWorkspace操作、LaunchItem一覧、LaunchItem詳細の3ペインとし、標準Splitterで幅を調整可能にします。
+Workspaceの選択はComboBoxと横スクロール可能なタブで同じ選択状態を共有し、タブのドラッグ＆ドロップで保存順を変更できます。メイン領域は左からWorkspace操作、LaunchItem一覧、LaunchItem詳細の3ペインとし、標準Splitterで幅を調整可能にします。
 Contextは必要な場合だけ表示し、未対応機能を操作可能に見せません。
 既存の灰色・ダークグレー・青アクセント、Ribbon/Header、歯車、青いブロック群、LaunchItem一覧、右側詳細、Workspace選択、一括起動を維持します。
 保存互換性とTime to Usableを優先し、Generic Context Framework、Plugin System、DI全面導入、Dynamic Property System、JSON Schema駆動UI、Workflow Engineを先行実装しません。
@@ -82,7 +82,7 @@ Contextは必要な場合だけ表示し、未対応機能を操作可能に見�
 
 ## Future Ideas
 
-起動順序、Delay、起動済み判定、サーバーReady待ち、Workspace終了、ショートカット、自動更新などは、実際に必要になった時点で検討します。
+起動順序、Delay、起動済み判定、サーバーReady待ち、ショートカット、自動更新などは、実際に必要になった時点で検討します。
 
 ## MUGEN Extension
 

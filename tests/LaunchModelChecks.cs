@@ -34,6 +34,10 @@ class LaunchModelChecks
         var bytes = File.ReadAllBytes(legacy);
         var migrated = new WorkspaceRepository(Path.Combine(folder, "migrated.json")).LoadOrMigrate(legacy);
         Check(migrated.Workspaces.Count == 4 && migrated.Workspaces[2].LaunchItems[0].Target == @"D:\sample.exe" && Convert.ToBase64String(bytes) == Convert.ToBase64String(File.ReadAllBytes(legacy)), "legacy migration preserves source");
+        var first = new Workspace { Name = "First" }; var second = new Workspace { Name = "Second" };
+        var ordered = new WorkspaceDocument(); ordered.Workspaces.Add(second); ordered.Workspaces.Add(first); repo.Save(ordered);
+        var reordered = repo.LoadOrMigrate("missing");
+        Check(reordered.Workspaces[0].Id == second.Id && reordered.Workspaces[1].Id == first.Id, "workspace tab order persists");
         return 0;
     }
 }

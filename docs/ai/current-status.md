@@ -1,6 +1,6 @@
 # Current Status
 
-Last updated: 2026-09-10
+Last updated: 2026-09-11
 
 ## Implemented
 
@@ -16,6 +16,7 @@ Last updated: 2026-09-10
 - 今回：詳細ペイン・編集ダイアログを「何を開く？ / Target」「何で開く？ / Opener」「どこに開く？ / Destination」に整理。Browser ProfileとWindow Groupを分離し、選択内容による条件表示を実装。
 - 今回：灰色Header・歯車・青ブロック・ダークな左右ペイン・Workspace選択・すべて起動を維持。編集ダイアログにも既存の配色を適用しスクロール可能にした。
 - 今回：Workspace ComboBoxと同じ選択状態を使う横スクロール可能なWorkspaceタブ。相互切替時に選択表示を同期。
+- 今回：Workspaceタブのドラッグ＆ドロップ並び替え。ドロップ先タブの左右で挿入位置を決め、Workspace一覧とComboBoxへ反映して即保存。
 - 今回：左Workspace操作、中央LaunchItem一覧、右LaunchItem詳細の3ペイン。2本のGridSplitter、各ペインのMinWidth、左右幅の終了時保存と次回復元。
 - 今回：Workspace Lifecycle（Launch / Track / Close）。Application / Commandの起動ProcessをWorkspace ID・LaunchItem ID別にメモリ追跡し、通常終了要求後に残存Processを終了。Commandは追跡PIDのProcess Treeを停止。
 
@@ -41,7 +42,9 @@ Last updated: 2026-09-10
 
 Plugin System、Generic Context Framework、Workflow Engineは導入していません。
 
-## Verified：今回（2026-09-10）
+## Verified
+
+- 2026-09-11：Workspaceタブ並び替え追加後のDebug Build成功、エラー0。XAMLイベント配線と保存処理をコンパイル確認。
 
 - Visual Studio 2022 Community MSBuild 17.14：変更後のDebug Build成功、エラー0。既存コード由来の警告14件。
 - `tests/WorkspaceLifecycleChecks.cs`：7チェック成功。Commandは追跡対象、Browserは除外、追跡Command Treeの停止、同時に起動した無関係Processの生存、終了後のセッション再利用を実Processで確認。
