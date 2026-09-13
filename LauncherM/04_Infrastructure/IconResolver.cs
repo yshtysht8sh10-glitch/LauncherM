@@ -36,6 +36,8 @@ namespace LauncherM.Infrastructure
 
                 if (item.Type == LaunchItemType.Folder && !string.IsNullOrWhiteSpace(item.Opener))
                 {
+                    string openerScheme;
+                    if (TryGetOpenerUriScheme(item, out openerScheme)) return ResolveUriScheme(openerScheme);
                     string openerPath = null;
                     if (item.Opener.Equals("Visual Studio Code", StringComparison.OrdinalIgnoreCase) || item.Opener.Equals("VS Code", StringComparison.OrdinalIgnoreCase)) openerPath = ApplicationLocator.FindVisualStudioCode();
                     else if (item.Opener.Equals("Application", StringComparison.OrdinalIgnoreCase)) openerPath = Environment.ExpandEnvironmentVariables((item.OpenerPath ?? "").Trim().Trim('"'));
@@ -68,6 +70,15 @@ namespace LauncherM.Infrastructure
             if (!Uri.TryCreate((target ?? "").Trim(), UriKind.Absolute, out uri)
                 || uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeFile) return false;
             scheme = uri.Scheme;
+            return true;
+        }
+
+        public static bool TryGetOpenerUriScheme(LaunchItem item, out string scheme)
+        {
+            scheme = null;
+            if (item == null || item.Type != LaunchItemType.Folder
+                || !string.Equals(item.Opener, CodexOpener.OpenerName, StringComparison.OrdinalIgnoreCase)) return false;
+            scheme = CodexOpener.UriScheme;
             return true;
         }
 

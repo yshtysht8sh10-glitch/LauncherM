@@ -11,8 +11,10 @@ class WorkspaceLifecycleChecks
         var workspace = new Workspace { Name = "Lifecycle" };
         var command = new LaunchItem { Name = "server", Type = LaunchItemType.Command, Target = "ping" };
         var browser = new LaunchItem { Name = "browser", Type = LaunchItemType.Url, Target = "https://example.com" };
+        var codex = new LaunchItem { Name = "codex", Type = LaunchItemType.Folder, Target = @"D:\working", Opener = "Codex", OpenerWindowMode = "New Thread" };
         Check(WorkspaceSessionManager.IsSafelyTrackable(command), "commands are trackable");
         Check(!WorkspaceSessionManager.IsSafelyTrackable(browser), "browser resources are excluded");
+        Check(!WorkspaceSessionManager.IsSafelyTrackable(codex), "Codex resources are excluded");
 
         Process tracked = Process.Start(new ProcessStartInfo("cmd.exe", "/c ping 127.0.0.1 -t") { CreateNoWindow = true, UseShellExecute = false });
         Process unrelated = Process.Start(new ProcessStartInfo("cmd.exe", "/c ping 127.0.0.1 -t") { CreateNoWindow = true, UseShellExecute = false });

@@ -12,6 +12,7 @@ LaunchItemはTarget（何を）・Opener（何で）・Destination（どこに�
 WorkspaceはLaunchItem集合であると同時に、LauncherM実行中だけ有効な作業セッションです。Application / Commandの起動時に返されたProcessをWorkspace IDとLaunchItem IDへ関連付けます。終了は通常終了要求、短い待機、残存時の強制終了の順です。Commandはその追跡PIDのプロセスツリーを対象にします。
 
 Browser、Explorer、OS関連付けで開くFileは共有プロセスや既存Windowへ合流し得るため追跡終了しません。無関係なWindowを閉じないことを優先した制約です。
+Codexも既存プロセスを再利用する可能性があり、起動したWindowだけを安全に識別できないため追跡終了しません。
 
 ## Workspace UI
 
@@ -28,9 +29,20 @@ Browser、Explorer、OS関連付けで開くFileは共有プロセスや既存Wi
 | ChatGPT | https://chatgpt.com | Chrome / 個人開発Profile | Browser Window / Main | 同上。Target Context「個人Googleアカウント」は思想のみで、保存・強制しない |
 | Local Server | プロジェクト内のサーバー起動コマンド | cmd.exe /k | OS任せのコンソール | Command + Target + Arguments。WorkingDirectoryはCommandでは未適用。必要ならコマンド自身で明示的に作業先を設定 |
 | Explorer | D:\WebMUGEN | Explorer | OS / Explorer任せ | Folder + Target。Explorer Group / Tab指定は未実装 |
+| Codex | D:\working\TaskMemo | Codex | New Thread | Folder + Target + Opener + OpenerWindowMode。TargetにはFolder pathを保存 |
 
 同じWorkspaceでも各LaunchItemのOpener・Context・Destinationは独立します。
 Workspaceに共通Userを持たせず、Browser/ProfileのWorkspace既定値継承も現在はありません。
+
+## Folder + Codex
+
+```text
+WHAT   Folder      D:\working\TaskMemo
+WITH   Codex
+WHERE  New Thread
+```
+
+内部処理は `Folder path → Uri.EscapeDataStringによるURL encode → codex://threads/new?path=... → Windows URI Scheme → Codex` です。Targetにアプリ固有Deep Linkを保存せず、OpenerがTargetから起動URIを生成します。現在サポートするCodex DestinationはNew Threadだけです。
 
 ## Browser Windowの現在の動作
 

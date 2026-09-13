@@ -21,17 +21,18 @@ Workspaceは作業環境、LaunchItemはその構成要素。Target / Opener / D
 | 概念 | 現在のフィールド / 処理 | 実装範囲 |
 | --- | --- | --- |
 | Target | Type、Target | Application / Folder / File / Url / Command。Project専用型なし |
-| Opener | Browser、Opener、OpenerPath、LaunchServiceのType分岐 | URLはDefault / Chrome / Edge / Firefox。FolderはExplorer / Visual Studio Code / Default / Application |
+| Opener | Browser、Opener、OpenerPath、LaunchServiceのType分岐 | URLはDefault / Chrome / Edge / Firefox。FolderはExplorer / Visual Studio Code / Codex / Default / Application |
 | Opener Context | BrowserProfile | Chrome/EdgeのDirectory ID、FirefoxのProfile名。サービス側Identityではない |
 | Opener Context | Arguments、WorkingDirectory | ArgumentsはApplication / Command、WorkingDirectoryはApplicationのみ使用 |
-| Destination | 起動方法、BrowserWindowGroup、OpenerWindowMode | 明示指定なしはOS / アプリ任せ。Chrome/Edgeの一括起動とVS CodeのDefault / New Window / Reuse Window |
+| Destination | 起動方法、BrowserWindowGroup、OpenerWindowMode | 明示指定なしはOS / アプリ任せ。Chrome/Edgeの一括起動、VS CodeのDefault / New Window / Reuse Window、CodexのNew Thread |
 | Destination Context | BrowserWindowGroup | 同一Workspace内のBrowser・Profile・Group単位。既存Window IDやブラウザの色付きTab Groupではない |
 | Target Context | 対応フィールドなし | 期待するサービスアカウント等の概念のみ |
 | 表示・識別 | Id、Name、IconPath | 3要素や認証Contextには含めない |
 
-表示アイコンの解決順は、ユーザー明示IconPath、Folderの明示Application Opener、実在するTargetファイル／フォルダ、HTTP(S) favicon、URI Scheme関連付け、LauncherM既定表示。`DefaultIcon`の環境変数とアイコンインデックスを解釈し、commandは`CommandLineToArgvW`で先頭の実行ファイルを安全に分離する。Schemeごとの成功・失敗結果はプロセス内でキャッシュする。Packaged Appの間接リソース表記など、通常ファイルへ静的に解決できない登録は既定表示へフォールバックする。
+表示アイコンの解決順は、ユーザー明示IconPath、Folderの明示Opener、実在するTargetファイル／フォルダ、HTTP(S) favicon、URI Scheme関連付け、LauncherM既定表示。Folder + Codexはcodex Schemeの`DefaultIcon`またはopen commandから静的に解決する。`DefaultIcon`の環境変数とアイコンインデックスを解釈し、commandは`CommandLineToArgvW`で先頭の実行ファイルを安全に分離する。Schemeごとの成功・失敗結果はプロセス内でキャッシュする。Packaged Appの間接リソース表記など、通常ファイルへ静的に解決できない登録は既定表示へフォールバックする。
 
 ApplicationはTarget自身を実行、FileはOS関連付け、Commandはcmd.exe /k。FolderはOpener未指定を含むExplorer、VS Code、OS既定、任意Applicationを切り替えます。
+Folder + Codexは`CodexOpener`がFolderの存在とcodex Scheme登録を確認し、`Uri.EscapeDataString`で絶対パスをエンコードして`codex://threads/new?path=...`を生成し、`UseShellExecute = true`でWindows Shellへ委譲します。
 これは現在の実装制約であり、TargetとOpenerが永久に固定される設計ではありません。
 一括起動は未指定グループを個別起動し、Chrome/Edgeの明示グループに`--new-window`と複数URLを渡します。
 個別起動ではWindow Groupを適用しません。Default / Firefoxで保存されたGroupは起動に使いません。
@@ -49,7 +50,7 @@ HeaderはLauncherMタイトルの右側に、高さを揃えたアイコン上�
 LaunchItem一覧上部の操作行は、横幅が不足した場合だけ横スクロールバーを表示します。
 タブとカードのドラッグで表示した挿入用の隙間は、親コンテナの透明な背景をヒットテスト面として使い、同じ挿入位置としてドロップを受け付けます。
 
-詳細ペインと既存編集ダイアログを3セクションで表示。URLではBrowser選択、FolderではExplorer / Visual Studio Code / Default / Applicationを選択します。任意Applicationではexeパス、VS CodeではDefault / New Window / Reuse Windowを表示します。明示BrowserだけProfile、Chrome/EdgeだけGroup、Application / Commandだけ引数、Applicationだけ保存済みWorkingDirectoryを表示します。
+詳細ペインと既存編集ダイアログを3セクションで表示。URLではBrowser選択、FolderではExplorer / Visual Studio Code / Codex / Default / Applicationを選択します。任意Applicationではexeパス、VS CodeではDefault / New Window / Reuse Window、CodexではNew Threadを表示します。明示BrowserだけProfile、Chrome/EdgeだけGroup、Application / Commandだけ引数、Applicationだけ保存済みWorkingDirectoryを表示します。
 WorkingDirectoryは読み取り専用。Target Contextや未対応Destinationの入力欄は作りません。
 灰色Header、歯車、ダークUI、Workspace選択・すべて起動は維持。Headerの表示切替ボタンで、選択Workspaceの3ペイン表示と全Workspace表示を切り替えます。全Workspace表示では左のWorkspace操作ペインを隠し、中央へWorkspace名、Workspace単位の一括起動・終了ボタン、そのWorkspaceのカードを順番に表示します。Workspace選択UIはタブへ集約し、既存ComboBoxは単一選択状態を保持する非表示コントロールとして使用します。タブ列末尾の＋ボタンからWorkspaceを追加でき、ドラッグ＆ドロップ時はWorkspaceDocumentのリスト順を変更して即保存します。左ペインのWorkspace名は通常はTextBlockで表示し、クリック時だけ同じ位置のTextBoxへ切り替えて編集します。Enterまたは編集欄の外側のクリックで保存し、Escでキャンセルします。中央ペインにはURLタイプを初期選択したリンク追加ボタンがあり、LaunchItemカードもドラッグ＆ドロップでリスト順を変更して即保存します。カード領域はScrollViewerの表示幅に追従し、通常表示・全Workspace表示ともカードを画面幅で折り返します。Ctrl＋マウスホイールはカードとアイコンだけを60～180%で拡大縮小し、文字サイズは変更しません。通常のマウスホイールは一覧をスクロールします。タブとカードのドラッグ中は半透明のスナップショットをAdornerで追従表示し、挿入先の左へ置く場合は対象を右へ、右へ置く場合は対象を左へ退避させて隙間を示します。左Workspace操作・中央LaunchItem一覧・右LaunchItem詳細の3ペインを2本のGridSplitterで区切り、左右幅はユーザー設定へ保存します。一覧と詳細の縦横スクロールバーは各方向で必要な場合だけ表示します。
 設定ウィンドウはWindowsのインストール済みフォント、全体文字サイズ倍率、テーマカラーを選択し、ユーザー設定へ保存します。設定内容だけをスクロール領域に置き、縦スクロールバーは画面端、設定内容は右余白付きで配置します。通常のComboBoxは選択肢を確認できる固定幅とし、適用・OK・キャンセルはウィンドウ下部へ固定表示します。ダーク背景で使うCheckBoxは明るい文字色を明示します。Workspace画面は設定変更イベントを受けてフォント・倍率・背景・前景・アクセントを再適用します。
@@ -66,7 +67,7 @@ JSONがない場合のみde.txtを読み、launcher 0..3を4 Workspaceへ、タ�
 
 WorkspaceはLaunchItem集合であると同時に、Launch、起動Resourceの追跡、Closeを持つ実行中セッションです。セッションは永続化せずLauncherMプロセス内だけで管理します。ApplicationとCommandで`Process.Start`が返したProcessだけを追跡し、Close時は`CloseMainWindow`、待機、必要時の強制終了の順で処理します。Commandは追跡PIDを起点に`taskkill /PID /T /F`で子プロセスも停止します。
 
-URL、Folder、Fileは、既存ブラウザ・Explorer・VS Code・OS関連付け先へ合流する可能性があるためClose対象外です。Chrome/EdgeのWindow GroupもCLIによる新規Window要求であり、安全なWindow Identityを取得できないため追跡終了しません。
+URL、Folder、Fileは、既存ブラウザ・Explorer・VS Code・Codex・OS関連付け先へ合流する可能性があるためClose対象外です。Codexは既存プロセスを再利用し得るため、LauncherMが開いたWindowを安全に識別できない限り終了しません。Chrome/EdgeのWindow GroupもCLIによる新規Window要求であり、安全なWindow Identityを取得できないため追跡終了しません。
 
 ## Planned / Future（未実装）
 

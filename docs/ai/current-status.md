@@ -15,6 +15,8 @@ Last updated: 2026-09-13
 - URL favicon取得・LocalApplicationDataへのキャッシュ、手動IconPath、画像表示。favicon.ico取得失敗時はGoogle favicon serviceへフォールバックする既存動作。
 - LaunchItemの汎用アイコン自動解決。明示IconPathを最優先し、exe／通常ファイル／フォルダはWindows Shell、HTTP(S)は既存favicon、URI SchemeはWindows Protocol AssociationのUserChoice／Scheme登録から`DefaultIcon`またはopen commandのexeを静的に解決。Scheme結果はメモリキャッシュし、失敗時は既定表示へフォールバック。
 - FolderのTargetとOpenerを分離。Explorer / Visual Studio Code / OS既定 / 任意Applicationを選択・保存し、VS CodeはDefault / New Window / Reuse Windowを指定可能。既存のOpener未指定FolderはExplorerへフォールバック。
+- Folder + Codex Opener。Targetには通常の絶対Folder pathを保存し、DestinationはNew Threadを`OpenerWindowMode`へ保存。起動時にFolder存在とcodex URI Scheme登録を確認し、URLエンコードした`codex://threads/new?path=...`をWindows Shellへ委譲。専用LaunchItem種別やboolは追加していない。
+- Folder + Codexの自動アイコンはcodex URI Scheme関連付けを参照し、静的抽出できない登録では既定アイコンへフォールバック。Workspace一括起動経路に対応し、共有Codexプロセスを閉じないためWorkspace Closeの追跡対象外。
 - VS CodeをPATH、Windows App Paths、User / System Installerの標準配置から検出。明示IconPathがないFolder + VS Code / 任意ApplicationではOpener実行ファイルのアイコンをTargetより優先。
 - 今回：詳細ペイン・編集ダイアログを「何を開く？ / Target」「何で開く？ / Opener」「どこに開く？ / Destination」に整理。Browser ProfileとWindow Groupを分離し、選択内容による条件表示を実装。
 - 今回：灰色Header・歯車・青ブロック・ダークな左右ペイン・Workspace選択・すべて起動を維持。編集ダイアログにも既存の配色を適用しスクロール可能にした。
@@ -65,6 +67,8 @@ Last updated: 2026-09-13
 Plugin System、Generic Context Framework、Workflow Engineは導入していません。
 
 ## Verified
+
+- 2026-09-13：Folder + Codex実装後のDebug Buildと隔離出力先へのRelease Build成功、エラー0（既存警告14件）。`LaunchModelChecks` 25件成功し、TaskMemoの正確なDeep Link、空白・日本語pathの`Uri.EscapeDataString`、Folder/Schemeエラー、Version 1 JSON往復、Workspace一括起動、Explorer/VS Code互換を確認。登録済みcodex SchemeへLauncherMの`LaunchService`から実際にURIをWindows Shell送信。`IconResolverChecks` 15件、`BrowserWorkspaceChecks` 12件、`WorkspaceLifecycleChecks` 8件成功。通常Release出力は起動中LauncherMがロックしていたため、隔離出力で検証した。
 
 - 2026-09-13：Folder Opener実装後のDebug Buildと隔離出力先へのRelease Build成功、エラー0（Debugは既存警告14件）。`LaunchModelChecks` 19件成功。Explorer互換、空白・日本語Targetのquote、任意Application、検出失敗時のエラー、実環境VS Code検出、New Window引数、Opener JSON往復、Workspace一括起動経路を確認。実在する空白・日本語名フォルダをVS Codeの新規Windowで開き、Window titleから対象Folderを確認。実行中LauncherMが通常Release出力をロックしていたため同出力先への最終コピーと、Computer Useサービス未構成によるGUI操作は未確認。
 
@@ -123,6 +127,7 @@ Plugin System、Generic Context Framework、Workflow Engineは導入していま
 - Applicationが単一インスタンスへ処理を引き渡して起動Processが直ちに終了した場合、その既存インスタンスは閉じない。強制終了時の未保存データ保護は各アプリの通常終了応答に依存する。
 - 非標準user-data root、portable版、削除済みProfile等の自動管理は未対応。
 - Microsoft Store / Packaged Appの間接リソース（`@{...}`等）からのアイコン抽出は未対応。Protocol登録から通常のDefaultIconまたはexeを得られない場合は既定表示へフォールバックする。
+- Codex Deep Linkは現在確認済みの`threads/new`だけをサポートする。Windows Shellへの送信は確認済みだが、Codex側でTaskMemo選択済みの新規Thread画面になったことの自動UI検証は行わない。
 - Repositoryはatomic write、バックアップ、破損JSON復旧に未対応。
 - de.txt移行は所属・タイトル・パスのみ。旧icon / memo / visual / PathFileSelectは元ファイルに残り、JSONへ完全移行しない。旧Orderによる並べ替えもない。
 - 旧コードには環境固有の絶対パスが残存。

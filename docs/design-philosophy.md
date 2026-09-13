@@ -40,7 +40,9 @@ Workspaceは作業環境の単位であり、LaunchItemはその環境を構成�
 
 URLだからChrome、フォルダだからExplorerという固定関係を中核思想にしません。
 同じmemo.txtをNotepadでもVS Codeでも、同じURLをChromeでもEdgeでも開ける方向を目指します。
-TargetTypeによってOpenerを固定しません。現在はURLのBrowser選択に加え、FolderをExplorer、Visual Studio Code、OS既定、任意Applicationで開くOpener選択を実装しています。
+TargetTypeによってOpenerを固定しません。現在はURLのBrowser選択に加え、FolderをExplorer、Visual Studio Code、Codex、OS既定、任意Applicationで開くOpener選択を実装しています。
+
+アプリ固有のDeep Linkが必要な場合も、Targetには元のリソースを保存します。例えばFolder + CodexではTargetに通常の絶対Folder pathを保存し、Codex Openerが起動時にURLエンコード済みDeep Linkを生成します。生成済みDeep LinkそのものをTargetへ保存しません。
 
 ## 独立したContextとIdentity
 
@@ -72,7 +74,7 @@ Contextは必要な場合だけ表示し、未対応機能を操作可能に見�
 既存の灰色・ダークグレー・青アクセント、Header、歯車、LaunchItem一覧、右側詳細、Workspace選択、一括起動を維持します。操作経路が重複したHeaderボタンは、対応するタブ・ペイン操作へ集約します。
 保存互換性とTime to Usableを優先し、Generic Context Framework、Plugin System、DI全面導入、Dynamic Property System、JSON Schema駆動UI、Workflow Engineを先行実装しません。
 
-LaunchItemの表示アイコンはユーザーの明示指定を最優先し、次に明示Opener、Target、LauncherM既定表示の順で自動解決します。Folder + VS Code / 任意ApplicationはOpenerの実行ファイル、通常のFolderはWindows Shellを使用します。Web URLは既存のfavicon優先を維持します。
+LaunchItemの表示アイコンはユーザーの明示指定を最優先し、次に明示Opener、Target、LauncherM既定表示の順で自動解決します。Folder + VS Code / 任意ApplicationはOpenerの実行ファイル、Folder + CodexはWindowsのcodex URI Scheme関連付け、通常のFolderはWindows Shellを使用します。Web URLは既存のfavicon優先を維持します。
 
 ## MVP Scope
 

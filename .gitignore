@@ -6,6 +6,7 @@
 *.userosscache
 *.sln.docstates
 TestResults/
+.build/
 *.pdb
 *.cache
 *.log

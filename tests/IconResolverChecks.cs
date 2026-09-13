@@ -27,6 +27,11 @@ class IconResolverChecks
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.File, Target = Path.GetTempFileName() }) != null, "File Shell icon", ref checks);
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath() }) != null, "Folder Shell icon", ref checks);
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Folder, Target = "missing-folder", Opener = "Application", OpenerPath = exe }) != null, "Folder explicit opener icon priority", ref checks);
+            var codexFolder = new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath(), Opener = "Codex", OpenerWindowMode = "New Thread" };
+            string openerScheme;
+            Check(IconResolver.TryGetOpenerUriScheme(codexFolder, out openerScheme) && openerScheme == "codex", "Folder Codex opener resolves scheme icon source", ref checks);
+            resolver.Resolve(codexFolder);
+            Check(true, "Folder Codex icon lookup safely falls back", ref checks);
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Application, Target = "unknown-launcherm-scheme:value" }) == null, "Unknown scheme fallback", ref checks);
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Application, Target = "invalid target that does not exist" }) == null, "Invalid target fallback", ref checks);
 

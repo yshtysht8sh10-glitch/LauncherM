@@ -33,6 +33,8 @@ namespace LauncherM.Application
             string opener = string.IsNullOrWhiteSpace(item.Opener) ? "Explorer" : item.Opener.Trim();
             if (opener.Equals("Explorer", StringComparison.OrdinalIgnoreCase)) return new ProcessStartInfo("explorer.exe", Quote(item.Target));
             if (opener.Equals("Default", StringComparison.OrdinalIgnoreCase)) return new ProcessStartInfo(item.Target) { UseShellExecute = true };
+            if (opener.Equals(CodexOpener.OpenerName, StringComparison.OrdinalIgnoreCase))
+                return CodexOpener.CreateStartInfo(item.Target, item.OpenerWindowMode);
             string executable;
             bool isVisualStudioCode = opener.Equals("Visual Studio Code", StringComparison.OrdinalIgnoreCase) || opener.Equals("VS Code", StringComparison.OrdinalIgnoreCase);
             if (isVisualStudioCode)
