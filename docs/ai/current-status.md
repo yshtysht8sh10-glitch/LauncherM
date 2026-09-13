@@ -68,6 +68,10 @@ Plugin System、Generic Context Framework、Workflow Engineは導入していま
 
 ## Verified
 
+- 2026-09-13：LaunchItem編集ダイアログでNameが空欄のときだけ、保存時に`LaunchItemNameResolver`でTarget主体の名前を生成する実装を追加。Folder、拡張子付きFile名、exeのVersionInfo、HTTP(S) hostname、一般URI path segment（OneNoteを含む）、Opener、最終既定名を扱い、既存またはユーザー入力済みNameは維持する。名前取得専用のネットワークアクセスは行わない。専用チェック10件成功。Debug / 隔離出力先Release Build成功（既存警告14件、エラー0）。この実行環境ではネイティブアプリ操作面が利用できず、実画面からの保存操作は未確認。
+
+- 2026-09-13：アイコン解決順を手動指定、専用Opener、Target、TargetType fallbackへ統一。Folder + Codexは既存codex URI Schemeを入口に、Desktop登録で取得できないMSIX版もAppModel RepositoryのURL関連付けとAppxManifestからロゴを解決する。`IconPathIsAutomatic`をVersion 1 JSONへ省略可能項目として追加し、手動指定をOpener変更後も維持、自動キャッシュは変更時に再解決する。Debug / 隔離出力先Release Build成功（既存警告14件、エラー0）。`IconResolverChecks` 27件成功し、実環境のMSIX版CodexアイコンがFolderアイコンと異なること、Default / VS Code / URL、手動優先、自動マーカーのJSON往復、取得失敗fallbackを確認。
+
 - 2026-09-13：Folder + VS Code のアイコン取得で、PATH 上の拡張子なし `bin\\code` ランチャーを汎用ファイルとして扱っていた問題を修正。VS Code 検出は `code.exe`、App Paths、標準配置を優先し、最後に `bin\\code` から親の実体 `Code.exe` を解決する。`IconResolverChecks` 21件成功。実環境の `C:\\Users\\saran\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe` を取得し、Folder Shell アイコンと画素が異なること、Explorer、Codex関連付け失敗時のFolder fallback、明示Icon優先、JSON保存・再読込後の再解決を確認。Computer Useへネイティブアプリ面が公開されず、専用fixtureの実画面目視は未確認。
 
 - 2026-09-13：Folder + Codex実装後のDebug Buildと隔離出力先へのRelease Build成功、エラー0（既存警告14件）。`LaunchModelChecks` 25件成功し、TaskMemoの正確なDeep Link、空白・日本語pathの`Uri.EscapeDataString`、Folder/Schemeエラー、Version 1 JSON往復、Workspace一括起動、Explorer/VS Code互換を確認。登録済みcodex SchemeへLauncherMの`LaunchService`から実際にURIをWindows Shell送信。`IconResolverChecks` 15件、`BrowserWorkspaceChecks` 12件、`WorkspaceLifecycleChecks` 8件成功。通常Release出力は起動中LauncherMがロックしていたため、隔離出力で検証した。

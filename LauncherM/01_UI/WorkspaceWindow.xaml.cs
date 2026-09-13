@@ -26,6 +26,7 @@ namespace LauncherM
         private readonly LaunchService launcher = new LaunchService();
         private readonly WebsiteIconCache websiteIcons = new WebsiteIconCache();
         private readonly IconResolver iconResolver;
+        private readonly LaunchItemNameResolver itemNameResolver = new LaunchItemNameResolver();
         private readonly WorkspaceSessionManager sessions = new WorkspaceSessionManager();
         private LaunchItem selectedItem;
         private readonly HashSet<LaunchItem> selectedItems = new HashSet<LaunchItem>();
@@ -263,13 +264,13 @@ namespace LauncherM
         }
         private async void AddItem(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; LaunchItem item = ShowLaunchItemDialog(null); if (item == null) return; workspace.LaunchItems.Add(item); await EnsureWebsiteIcon(item); repository.Save(document); WorkspaceChanged(null, null); }
         private async void AddLink(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; LaunchItem item = ShowLaunchItemDialog(null, LaunchItemType.Url); if (item == null) return; workspace.LaunchItems.Add(item); await EnsureWebsiteIcon(item); repository.Save(document); WorkspaceChanged(null, null); }
-        private async void EditItem(object sender, RoutedEventArgs e) { if (selectedItem == null) return; LaunchItem edited = ShowLaunchItemDialog(selectedItem); if (edited == null) return; selectedItem.Name = edited.Name; selectedItem.Type = edited.Type; selectedItem.Target = edited.Target; selectedItem.Arguments = edited.Arguments; selectedItem.WorkingDirectory = edited.WorkingDirectory; selectedItem.Browser = edited.Browser; selectedItem.BrowserProfile = edited.BrowserProfile; selectedItem.BrowserWindowGroup = edited.BrowserWindowGroup; selectedItem.Opener = edited.Opener; selectedItem.OpenerPath = edited.OpenerPath; selectedItem.OpenerWindowMode = edited.OpenerWindowMode; selectedItem.IconPath = edited.IconPath; await EnsureWebsiteIcon(selectedItem); repository.Save(document); RenderItems(); }
+        private async void EditItem(object sender, RoutedEventArgs e) { if (selectedItem == null) return; LaunchItem edited = ShowLaunchItemDialog(selectedItem); if (edited == null) return; selectedItem.Name = edited.Name; selectedItem.Type = edited.Type; selectedItem.Target = edited.Target; selectedItem.Arguments = edited.Arguments; selectedItem.WorkingDirectory = edited.WorkingDirectory; selectedItem.Browser = edited.Browser; selectedItem.BrowserProfile = edited.BrowserProfile; selectedItem.BrowserWindowGroup = edited.BrowserWindowGroup; selectedItem.Opener = edited.Opener; selectedItem.OpenerPath = edited.OpenerPath; selectedItem.OpenerWindowMode = edited.OpenerWindowMode; selectedItem.IconPath = edited.IconPath; selectedItem.IconPathIsAutomatic = edited.IconPathIsAutomatic; await EnsureWebsiteIcon(selectedItem); repository.Save(document); RenderItems(); }
         private LaunchItem ShowLaunchItemDialog(LaunchItem source, LaunchItemType? initialType = null)
         {
             Window dialog = new Window { Title = source == null ? "LaunchItemを追加" : "LaunchItemを編集", Width = 540, Height = 760, MaxHeight = SystemParameters.WorkArea.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner, Owner = this, Background = Background, Foreground = Foreground };
             dialog.Resources = Resources;
             StackPanel panel = new StackPanel { Margin = new Thickness(18) };
-            TextBox name = AddDialogText(panel, "名前", source?.Name ?? "");
+            TextBox name = AddDialogText(panel, "名前（空欄ならTargetから自動取得）", source?.Name ?? "");
             AddDialogSection(panel, "何を開く？ / Target");
             var type = new ComboBox { ItemsSource = Enum.GetValues(typeof(LaunchItemType)), SelectedItem = source == null ? (object)(initialType ?? LaunchItemType.Application) : source.Type, Margin = new Thickness(0, 2, 0, 8) };
             panel.Children.Add(new TextBlock { Text = "対象の種類" }); panel.Children.Add(type);
@@ -353,8 +354,32 @@ namespace LauncherM
             var iconBrowse = new Button { Content = "参照…", Width = 75, Margin = new Thickness(6, 0, 0, 0) };
             DockPanel.SetDock(iconBrowse, Dock.Right); iconRow.Children.Add(iconBrowse);
             var iconPath = new TextBox { Text = source?.IconPath ?? "", Margin = new Thickness(0) }; iconRow.Children.Add(iconPath); panel.Children.Add(iconRow);
-            iconBrowse.Click += (s, e) => { using (var picker = new System.Windows.Forms.OpenFileDialog { Title = "アイコンに使用するファイルを選択", Filter = "アイコン・画像・実行ファイル|*.ico;*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.exe;*.lnk|すべてのファイル|*.*" }) if (picker.ShowDialog() == System.Windows.Forms.DialogResult.OK) iconPath.Text = picker.FileName; };
-            StackPanel buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right }; Button ok = new Button { Content = "OK", Width = 75, IsDefault = true }; Button cancel = new Button { Content = "キャンセル", Width = 90, IsCancel = true, Margin = new Thickness(8, 0, 0, 0) }; buttons.Children.Add(ok); buttons.Children.Add(cancel); panel.Children.Add(buttons); dialog.Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }; ok.Click += (s, e) => { if (string.IsNullOrWhiteSpace(name.Text) || string.IsNullOrWhiteSpace(target.Text)) { MessageBox.Show("名前とTargetを入力してください。", "入力確認"); return; } if ((LaunchItemType)type.SelectedItem == LaunchItemType.Url && !Uri.IsWellFormedUriString(target.Text.Trim(), UriKind.Absolute)) { MessageBox.Show("有効なURLを入力してください。", "入力確認"); return; } if ((LaunchItemType)type.SelectedItem == LaunchItemType.Folder && (folderOpener.SelectedItem as string) == CodexOpener.OpenerName && !Directory.Exists(Environment.ExpandEnvironmentVariables(target.Text.Trim().Trim('"')))) { MessageBox.Show("指定したFolderが見つかりません。", "入力確認"); return; } if ((LaunchItemType)type.SelectedItem == LaunchItemType.Folder && (folderOpener.SelectedItem as string) == "Application" && (string.IsNullOrWhiteSpace(openerPath.Text) || !File.Exists(Environment.ExpandEnvironmentVariables(openerPath.Text.Trim().Trim('"'))))) { MessageBox.Show("任意アプリの実行ファイルが見つかりません。", "入力確認"); return; } if (!string.IsNullOrWhiteSpace(iconPath.Text) && !File.Exists(iconPath.Text.Trim())) { MessageBox.Show("指定したアイコンファイルが見つかりません。", "入力確認"); return; } dialog.DialogResult = true; }; if (dialog.ShowDialog() != true) return null; string savedIcon = iconPath.Text.Trim(); if (source != null && websiteIcons.IsManagedPath(savedIcon) && !string.Equals(source.Target, target.Text.Trim(), StringComparison.OrdinalIgnoreCase)) savedIcon = ""; string selectedOpener = (LaunchItemType)type.SelectedItem == LaunchItemType.Folder ? folderOpener.SelectedItem as string : source?.Opener; string selectedDestination = selectedOpener == CodexOpener.OpenerName ? codexDestination.SelectedItem as string : codeWindow.SelectedItem as string ?? "Default"; return new LaunchItem { Id = source == null ? Guid.NewGuid() : source.Id, Name = name.Text.Trim(), Type = (LaunchItemType)type.SelectedItem, Target = target.Text.Trim(), Arguments = arguments.Text.Trim(), WorkingDirectory = source == null ? "" : source.WorkingDirectory, Browser = browser.SelectedItem == null ? "Default" : browser.SelectedItem.ToString(), BrowserProfile = profileId(), BrowserWindowGroup = windowGroup.Text.Trim(), Opener = selectedOpener, OpenerPath = openerPath.Text.Trim(), OpenerWindowMode = selectedDestination, IconPath = savedIcon };
+            bool iconPathIsAutomatic = iconResolver.IsAutomaticIconPath(source);
+            iconPath.TextChanged += (s, e) => iconPathIsAutomatic = false;
+            iconBrowse.Click += (s, e) => { using (var picker = new System.Windows.Forms.OpenFileDialog { Title = "アイコンに使用するファイルを選択", Filter = "アイコン・画像・実行ファイル|*.ico;*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.exe;*.lnk|すべてのファイル|*.*" }) if (picker.ShowDialog() == System.Windows.Forms.DialogResult.OK) { iconPathIsAutomatic = false; iconPath.Text = picker.FileName; } };
+            StackPanel buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+            Button ok = new Button { Content = "OK", Width = 75, IsDefault = true };
+            Button cancel = new Button { Content = "キャンセル", Width = 90, IsCancel = true, Margin = new Thickness(8, 0, 0, 0) };
+            buttons.Children.Add(ok); buttons.Children.Add(cancel); panel.Children.Add(buttons);
+            dialog.Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+            ok.Click += (s, e) =>
+            {
+                if (string.IsNullOrWhiteSpace(target.Text)) { MessageBox.Show("Targetを入力してください。", "入力確認"); return; }
+                if ((LaunchItemType)type.SelectedItem == LaunchItemType.Url && !Uri.IsWellFormedUriString(target.Text.Trim(), UriKind.Absolute)) { MessageBox.Show("有効なURLを入力してください。", "入力確認"); return; }
+                if ((LaunchItemType)type.SelectedItem == LaunchItemType.Folder && (folderOpener.SelectedItem as string) == CodexOpener.OpenerName && !Directory.Exists(Environment.ExpandEnvironmentVariables(target.Text.Trim().Trim('"')))) { MessageBox.Show("指定したFolderが見つかりません。", "入力確認"); return; }
+                if ((LaunchItemType)type.SelectedItem == LaunchItemType.Folder && (folderOpener.SelectedItem as string) == "Application" && (string.IsNullOrWhiteSpace(openerPath.Text) || !File.Exists(Environment.ExpandEnvironmentVariables(openerPath.Text.Trim().Trim('"'))))) { MessageBox.Show("任意アプリの実行ファイルが見つかりません。", "入力確認"); return; }
+                if (!string.IsNullOrWhiteSpace(iconPath.Text) && !File.Exists(iconPath.Text.Trim())) { MessageBox.Show("指定したアイコンファイルが見つかりません。", "入力確認"); return; }
+                dialog.DialogResult = true;
+            };
+            if (dialog.ShowDialog() != true) return null;
+            string savedIcon = iconPath.Text.Trim();
+            string selectedOpener = (LaunchItemType)type.SelectedItem == LaunchItemType.Folder ? folderOpener.SelectedItem as string : source?.Opener;
+            bool automaticSourceChanged = source != null && iconPathIsAutomatic && iconResolver.ShouldResetAutomaticIcon(source, (LaunchItemType)type.SelectedItem, target.Text.Trim(), selectedOpener, openerPath.Text.Trim());
+            if (automaticSourceChanged) savedIcon = "";
+            string selectedDestination = selectedOpener == CodexOpener.OpenerName ? codexDestination.SelectedItem as string : codeWindow.SelectedItem as string ?? "Default";
+            var result = new LaunchItem { Id = source == null ? Guid.NewGuid() : source.Id, Name = name.Text.Trim(), Type = (LaunchItemType)type.SelectedItem, Target = target.Text.Trim(), Arguments = arguments.Text.Trim(), WorkingDirectory = source == null ? "" : source.WorkingDirectory, Browser = browser.SelectedItem == null ? "Default" : browser.SelectedItem.ToString(), BrowserProfile = profileId(), BrowserWindowGroup = windowGroup.Text.Trim(), Opener = selectedOpener, OpenerPath = openerPath.Text.Trim(), OpenerWindowMode = selectedDestination, IconPath = savedIcon, IconPathIsAutomatic = iconPathIsAutomatic && !string.IsNullOrWhiteSpace(savedIcon) };
+            result.Name = itemNameResolver.Resolve(result);
+            return result;
         }
         private static void AddDialogSection(StackPanel panel, string title)
         {
@@ -426,7 +451,7 @@ namespace LauncherM
         }
         private static string IconFor(LaunchItemType type) { switch (type) { case LaunchItemType.Folder: return "▰"; case LaunchItemType.Url: return "◎"; case LaunchItemType.Command: return ">_"; case LaunchItemType.File: return "▤"; default: return "◆"; } }
         private BitmapSource GetItemIcon(LaunchItem item) { return iconResolver.Resolve(item); }
-        private async Task EnsureWebsiteIcon(LaunchItem item) { string path = await Task.Run(() => iconResolver.GetOrDownloadWebsiteIcon(item)); if (!string.IsNullOrWhiteSpace(path)) item.IconPath = path; }
+        private async Task EnsureWebsiteIcon(LaunchItem item) { string path = await Task.Run(() => iconResolver.GetOrDownloadWebsiteIcon(item)); if (!string.IsNullOrWhiteSpace(path)) { item.IconPath = path; item.IconPathIsAutomatic = true; } }
         private async Task LoadMissingWebsiteIcons() { bool changed = false; foreach (var workspace in document.Workspaces) foreach (var item in workspace.LaunchItems) if (item.Type == LaunchItemType.Url && string.IsNullOrWhiteSpace(item.IconPath)) { await EnsureWebsiteIcon(item); changed |= !string.IsNullOrWhiteSpace(item.IconPath); } if (changed) { repository.Save(document); RenderItems(); } }
         private void RenderWorkspaceTabs()
         {

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
+using System.Xml.Linq;
 using Microsoft.Win32;
 using LauncherM.Domain;
 
@@ -31,7 +33,8 @@ namespace LauncherM.Infrastructure
             if (item == null) return null;
             try
             {
-                BitmapSource explicitIcon = ResolveExplicitIcon(item.IconPath);
+                bool automaticPath = IsAutomaticIconPath(item);
+                BitmapSource explicitIcon = automaticPath ? null : ResolveExplicitIcon(item.IconPath);
                 if (explicitIcon != null) return explicitIcon;
 
                 if (item.Type == LaunchItemType.Folder && !string.IsNullOrWhiteSpace(item.Opener))
@@ -66,9 +69,25 @@ namespace LauncherM.Infrastructure
                     }
                     if (uri.Scheme != Uri.UriSchemeFile) return ResolveUriScheme(uri.Scheme);
                 }
+
+                if (item.Type == LaunchItemType.Folder) return GetShellIcon(target, true, true);
+                if (item.Type == LaunchItemType.File || item.Type == LaunchItemType.Application) return GetShellIcon(target, false, true);
             }
             catch { }
             return null;
+        }
+
+        public bool IsAutomaticIconPath(LaunchItem item)
+        {
+            return item != null && (item.IconPathIsAutomatic || websiteIcons.IsManagedPath(item.IconPath));
+        }
+
+        public bool ShouldResetAutomaticIcon(LaunchItem item, LaunchItemType type, string target, string opener, string openerPath)
+        {
+            return IsAutomaticIconPath(item) && (item.Type != type
+                || !string.Equals(item.Target, target, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(item.Opener, opener, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(item.OpenerPath, openerPath, StringComparison.OrdinalIgnoreCase));
         }
 
         public static bool TryGetUriScheme(string target, out string scheme)
@@ -116,9 +135,75 @@ namespace LauncherM.Infrastructure
             string progId = ReadUserChoiceProgId(scheme);
             if (!string.IsNullOrWhiteSpace(progId)) icon = ResolveRegisteredClass(progId);
             if (icon == null) icon = ResolveRegisteredClass(scheme);
+            if (icon == null) icon = ResolvePackagedProtocol(scheme);
             if (icon != null) schemeIcons[scheme] = icon;
             else missingSchemeIcons.Add(scheme);
             return icon;
+        }
+
+        private static BitmapSource ResolvePackagedProtocol(string scheme)
+        {
+            const string packagesKey = @"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages";
+            try
+            {
+                using (RegistryKey packages = Registry.CurrentUser.OpenSubKey(packagesKey))
+                {
+                    if (packages == null) return null;
+                    foreach (string packageName in packages.GetSubKeyNames())
+                    using (RegistryKey package = packages.OpenSubKey(packageName))
+                    using (RegistryKey associations = package?.OpenSubKey(@"App\Capabilities\URLAssociations"))
+                    {
+                        if (associations == null || associations.GetValue(scheme) == null) continue;
+                        string root = package.GetValue("PackageRootFolder") as string;
+                        BitmapSource icon = ResolvePackageManifestIcon(root, scheme);
+                        if (icon != null) return icon;
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException || ex is System.Security.SecurityException) { }
+            return null;
+        }
+
+        private static BitmapSource ResolvePackageManifestIcon(string packageRoot, string scheme)
+        {
+            try
+            {
+                string manifestPath = Path.Combine(packageRoot ?? "", "AppxManifest.xml");
+                if (!File.Exists(manifestPath)) return null;
+                XDocument manifest = XDocument.Load(manifestPath);
+                foreach (XElement application in manifest.Descendants().Where(element => element.Name.LocalName == "Application"))
+                {
+                    bool ownsProtocol = application.Descendants().Any(element => element.Name.LocalName == "Protocol" && string.Equals((string)element.Attribute("Name"), scheme, StringComparison.OrdinalIgnoreCase));
+                    if (!ownsProtocol) continue;
+                    XElement visual = application.Descendants().FirstOrDefault(element => element.Name.LocalName == "VisualElements");
+                    string logo = (string)visual?.Attribute("Square44x44Logo") ?? (string)visual?.Attribute("Square150x150Logo");
+                    BitmapSource icon = LoadBestPackageLogo(packageRoot, logo);
+                    if (icon != null) return icon;
+                    string executable = (string)application.Attribute("Executable");
+                    string executablePath = Path.Combine(packageRoot, (executable ?? "").Replace('/', Path.DirectorySeparatorChar));
+                    if (File.Exists(executablePath)) return GetShellIcon(executablePath, false, false);
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Xml.XmlException || ex is ArgumentException || ex is System.Security.SecurityException) { }
+            return null;
+        }
+
+        private static BitmapSource LoadBestPackageLogo(string packageRoot, string relativeLogo)
+        {
+            if (string.IsNullOrWhiteSpace(relativeLogo)) return null;
+            string path = Path.Combine(packageRoot, relativeLogo.Replace('/', Path.DirectorySeparatorChar));
+            BitmapSource image = LoadImage(path);
+            if (image != null) return image;
+            string directory = Path.GetDirectoryName(path);
+            string name = Path.GetFileNameWithoutExtension(path);
+            string extension = Path.GetExtension(path);
+            if (!Directory.Exists(directory)) return null;
+            foreach (string candidate in Directory.GetFiles(directory, name + ".scale-*" + extension).OrderByDescending(File.GetLastWriteTimeUtc))
+            {
+                image = LoadImage(candidate);
+                if (image != null) return image;
+            }
+            return null;
         }
 
         private static BitmapSource ResolveRegisteredClass(string className)

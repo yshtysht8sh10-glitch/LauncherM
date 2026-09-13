@@ -62,6 +62,8 @@ Target Contextは、事前に準備したBrowser Profile、サービスが公開
 LauncherMはPassword、Cookie、Session Token、OAuth Token、Google / Microsoft / GitHub等のPasswordを管理・保存・操作しません。
 Webサービスへの自動ログインは目的に含めず、認証状態はブラウザProfileと各サービスへ任せます。
 
+LaunchItemの表示名は主にTarget（何を開くか）を表し、ユーザー指定を最優先します。未指定時だけTargetから簡潔な名前を自動解決し、Targetで解決できない場合にOpener、最後に既定名へフォールバックします。表示アイコンは主にOpener（何で開くか）を伝える役割を担います。
+
 Destination Contextの例はBrowser Window Group = Main、Explorer Group = Project、
 Virtual Environment = WSL UbuntuとそのLinux Userです。Monitor / X / Y / Width / Height / Maximized、既存ウィンドウのタブ、仮想デスクトップ、VM / Remote等は将来の概念であり、現時点の実装を意味しません。
 WorkingDirectoryはプロセスが相対パスを解決するOpener Contextであり、ウィンドウの配置先ではありません。

@@ -22,6 +22,7 @@ namespace LauncherM.Domain
         [DataMember(Order = 11, EmitDefaultValue = false)] public string Opener { get; set; }
         [DataMember(Order = 12, EmitDefaultValue = false)] public string OpenerPath { get; set; }
         [DataMember(Order = 13, EmitDefaultValue = false)] public string OpenerWindowMode { get; set; }
+        [DataMember(Order = 14, EmitDefaultValue = false)] public bool IconPathIsAutomatic { get; set; }
         public LaunchItem() { Id = Guid.NewGuid(); Name = ""; Target = ""; Arguments = ""; WorkingDirectory = ""; Browser = "Default"; BrowserProfile = ""; IconPath = ""; Opener = ""; OpenerPath = ""; OpenerWindowMode = "Default"; }
     }
 

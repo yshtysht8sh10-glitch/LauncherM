@@ -40,12 +40,22 @@ class IconResolverChecks
             string openerScheme;
             Check(IconResolver.TryGetOpenerUriScheme(codexFolder, out openerScheme) && openerScheme == "codex", "Folder Codex opener resolves scheme icon source", ref checks);
             Check(resolver.Resolve(codexFolder) != null, "Folder Codex icon lookup safely falls back to target when association icon is unavailable", ref checks);
+            BitmapSource defaultFolderIcon = resolver.Resolve(new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath(), Opener = "Default" });
+            BitmapSource codexIcon = resolver.Resolve(codexFolder);
+            if (CodexOpener.IsUriSchemeRegistered(CodexOpener.UriScheme)) Check(codexIcon != null && !SamePixels(defaultFolderIcon, codexIcon), "Installed packaged Codex uses app icon instead of Folder icon", ref checks);
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Application, Target = "unknown-launcherm-scheme:value" }) == null, "Unknown scheme fallback", ref checks);
-            Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Application, Target = "invalid target that does not exist" }) == null, "Invalid target fallback", ref checks);
+            Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Application, Target = "invalid target that does not exist.exe" }) != null, "Invalid target uses TargetType fallback", ref checks);
 
             string explicitImage = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "explicit.png");
             using (var bitmap = new System.Drawing.Bitmap(2, 2)) bitmap.Save(explicitImage, System.Drawing.Imaging.ImageFormat.Png);
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Application, Target = "unknown-launcherm-scheme:value", IconPath = explicitImage }) != null, "Explicit icon priority", ref checks);
+            var manuallyConfigured = new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath(), Opener = "Codex", IconPath = explicitImage };
+            Check(SamePixels(resolver.Resolve(manuallyConfigured), resolver.Resolve(new LaunchItem { IconPath = explicitImage })), "Manual icon remains higher priority than Codex opener", ref checks);
+            manuallyConfigured.IconPathIsAutomatic = true;
+            Check(!SamePixels(resolver.Resolve(manuallyConfigured), resolver.Resolve(new LaunchItem { IconPath = explicitImage })), "Automatic icon path does not hide changed opener", ref checks);
+            Check(resolver.ShouldResetAutomaticIcon(manuallyConfigured, LaunchItemType.Folder, manuallyConfigured.Target, "Default", null), "Editing automatic icon from Codex to Default resets cached path", ref checks);
+            manuallyConfigured.IconPathIsAutomatic = false;
+            Check(!resolver.ShouldResetAutomaticIcon(manuallyConfigured, LaunchItemType.Folder, manuallyConfigured.Target, "Default", null), "Editing manual icon preserves configured path", ref checks);
 
             var oneNote = new LaunchItem { Type = LaunchItemType.Application, Target = "onenote:https://d.docs.live.net/example" };
             bool oneNoteRegistered = Microsoft.Win32.Registry.ClassesRoot.OpenSubKey("onenote") != null;
@@ -63,7 +73,7 @@ class IconResolverChecks
                 var workspace = new Workspace { Name = "icons" };
                 workspace.LaunchItems.Add(new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath(), Opener = "Visual Studio Code" });
                 workspace.LaunchItems.Add(new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath(), Opener = "Explorer" });
-                workspace.LaunchItems.Add(new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath(), Opener = "Codex" });
+                workspace.LaunchItems.Add(new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath(), Opener = "Codex", IconPath = explicitImage, IconPathIsAutomatic = true });
                 workspace.LaunchItems.Add(new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath(), Opener = "Visual Studio Code", IconPath = explicitImage });
                 document.Workspaces.Add(workspace);
                 var repository = new WorkspaceRepository(Path.Combine(roundtripFolder, "workspaces.json"));
@@ -73,6 +83,7 @@ class IconResolverChecks
                 Check(code == null || !SamePixels(restartedResolver.Resolve(restored.LaunchItems[0]), restartedResolver.Resolve(restored.LaunchItems[1])), "VS Code icon survives save and restart-style reload", ref checks);
                 Check(restartedResolver.Resolve(restored.LaunchItems[1]) != null, "Explorer Folder icon survives save and restart-style reload", ref checks);
                 Check(restartedResolver.Resolve(restored.LaunchItems[2]) != null, "Codex icon or safe Folder fallback survives save and restart-style reload", ref checks);
+                Check(restored.LaunchItems[2].IconPathIsAutomatic, "Automatic icon marker survives save and restart-style reload", ref checks);
                 Check(SamePixels(restartedResolver.Resolve(restored.LaunchItems[3]), restartedResolver.Resolve(new LaunchItem { IconPath = explicitImage })), "Explicit icon remains highest priority after reload", ref checks);
             }
             finally { Directory.Delete(roundtripFolder, true); }

@@ -10,7 +10,8 @@
 - `04_Infrastructure/WorkspaceRepository.cs`：DataContractJsonSerializerで作業ディレクトリの`workspaces.json`を読み書き。Version = 1。
 - `BrowserProfiles.cs`：標準Local Stateのprofile.info_cacheから表示名とDirectoryのみを読み、Chrome/Edgeの候補を表示。手入力も可能。FirefoxはProfile名。
 - `WebsiteIconCache.cs`：URL faviconの取得・ローカルキャッシュ。IconPathは自動取得したfaviconと手動指定の双方に使用。
-- `IconResolver.cs`：LaunchItemの表示アイコンを一元解決。明示IconPathを最優先し、実在ファイル／exeとフォルダはWindows Shell、HTTP(S)は既存faviconキャッシュ、その他の絶対URIはSchemeとしてWindows Protocol Associationを参照する。URI SchemeはUserChoiceのProgId、Scheme登録の順に調べ、`DefaultIcon`、次に`shell\\open\\command`のexeから抽出する。解決のためにTargetを起動しない。
+- `LaunchItemNameResolver.cs`：保存時にNameが空欄の場合だけ、Folder末尾名、拡張子付きFile名、exeのFileDescription / ProductName、URI path segment、Web hostnameの順でTarget主体の表示名を解決し、Opener、`LaunchItem`へフォールバックする。名前取得専用のネットワークアクセスは行わない。
+- `IconResolver.cs`：LaunchItemの表示アイコンを一元解決。手動IconPath、専用Opener、Target、TargetType fallbackの順に解決する。実在ファイル／exeとフォルダはWindows Shell、HTTP(S)は既存faviconキャッシュ、その他の絶対URIはSchemeとしてWindows Protocol Associationを参照する。URI SchemeはUserChoiceのProgId、Scheme登録、AppModel RepositoryのURL関連付けとAppxManifestの順に調べ、Desktop / MSIX双方のアイコンを静的に取得する。解決のためにTargetを起動しない。
 - 旧`0010_MainWindow`、設定画面、de.txt / se.txt関連コードは残存。MUGEN固有処理は旧UI側に留め、汎用Coreへ移しません。
 
 ## 中核概念と既存モデルの対応
@@ -29,7 +30,9 @@ Workspaceは作業環境、LaunchItemはその構成要素。Target / Opener / D
 | Target Context | 対応フィールドなし | 期待するサービスアカウント等の概念のみ |
 | 表示・識別 | Id、Name、IconPath | 3要素や認証Contextには含めない |
 
-表示アイコンの解決順は、ユーザー明示IconPath、Folderの明示Opener、実在するTargetファイル／フォルダ、HTTP(S) favicon、URI Scheme関連付け、LauncherM既定表示。Folder + Codexはcodex Schemeの`DefaultIcon`またはopen commandから静的に解決する。`DefaultIcon`の環境変数とアイコンインデックスを解釈し、commandは`CommandLineToArgvW`で先頭の実行ファイルを安全に分離する。Schemeごとの成功・失敗結果はプロセス内でキャッシュする。Packaged Appの間接リソース表記など、通常ファイルへ静的に解決できない登録は既定表示へフォールバックする。
+表示アイコンの解決順は、ユーザー明示IconPath、Folderの専用Opener、実在するTargetファイル／フォルダまたはHTTP(S) favicon、TargetType fallback。Folder + Codexはcodex SchemeのDesktop登録を先に参照し、取得できない場合はAppModel RepositoryのURL関連付けから該当MSIX packageを特定してAppxManifestのVisualElements logo（取得不可時はmanifestのExecutable）を使う。専用Openerを解決できない場合はTargetへ安全にフォールバックする。`IconPathIsAutomatic`で自動キャッシュと手動指定を区別し、旧データの管理下favicon pathも自動と推定する。Schemeごとの成功・失敗結果はプロセス内でキャッシュする。
+
+表示名は主にTarget（WHAT）、表示アイコンは主にOpener（WITH）を表す。編集ダイアログは既存Nameをそのまま維持し、空欄で保存した新規・既存項目にだけ名前解決を適用するため、既存JSONの読込だけではNameを変更しない。
 
 ApplicationはTarget自身を実行、FileはOS関連付け、Commandはcmd.exe /k。FolderはOpener未指定を含むExplorer、VS Code、OS既定、任意Applicationを切り替えます。
 Folder + Codexは`CodexOpener`がFolderの存在とcodex Scheme登録を確認し、`Uri.EscapeDataString`で絶対パスをエンコードして`codex://threads/new?path=...`を生成し、`UseShellExecute = true`でWindows Shellへ委譲します。
