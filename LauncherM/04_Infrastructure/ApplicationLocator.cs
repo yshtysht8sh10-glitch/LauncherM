@@ -9,17 +9,28 @@ namespace LauncherM.Infrastructure
     {
         public static string FindVisualStudioCode()
         {
-            foreach (string command in new[] { "code.exe", "code" })
-            {
-                string path = FindOnPath(command);
-                if (path != null) return path;
-            }
+            string path = FindOnPath("code.exe");
+            if (path != null) return path;
 
             string registered = FindAppPath("Code.exe");
             if (registered != null) return registered;
 
             foreach (string candidate in VisualStudioCodeCandidates())
                 if (!string.IsNullOrWhiteSpace(candidate) && File.Exists(candidate)) return candidate;
+
+            // VS Code normally adds its extensionless bin\code launcher to PATH.
+            // Resolve that launcher back to the real executable so callers also get
+            // the application icon instead of the Shell's generic file icon.
+            string launcher = FindOnPath("code");
+            if (launcher != null)
+            {
+                try
+                {
+                    string executable = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(launcher), "..", "Code.exe"));
+                    if (File.Exists(executable)) return executable;
+                }
+                catch (Exception ex) when (ex is ArgumentException || ex is NotSupportedException || ex is PathTooLongException) { }
+            }
             return null;
         }
 

@@ -68,6 +68,8 @@ Plugin System、Generic Context Framework、Workflow Engineは導入していま
 
 ## Verified
 
+- 2026-09-13：Folder + VS Code のアイコン取得で、PATH 上の拡張子なし `bin\\code` ランチャーを汎用ファイルとして扱っていた問題を修正。VS Code 検出は `code.exe`、App Paths、標準配置を優先し、最後に `bin\\code` から親の実体 `Code.exe` を解決する。`IconResolverChecks` 21件成功。実環境の `C:\\Users\\saran\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe` を取得し、Folder Shell アイコンと画素が異なること、Explorer、Codex関連付け失敗時のFolder fallback、明示Icon優先、JSON保存・再読込後の再解決を確認。Computer Useへネイティブアプリ面が公開されず、専用fixtureの実画面目視は未確認。
+
 - 2026-09-13：Folder + Codex実装後のDebug Buildと隔離出力先へのRelease Build成功、エラー0（既存警告14件）。`LaunchModelChecks` 25件成功し、TaskMemoの正確なDeep Link、空白・日本語pathの`Uri.EscapeDataString`、Folder/Schemeエラー、Version 1 JSON往復、Workspace一括起動、Explorer/VS Code互換を確認。登録済みcodex SchemeへLauncherMの`LaunchService`から実際にURIをWindows Shell送信。`IconResolverChecks` 15件、`BrowserWorkspaceChecks` 12件、`WorkspaceLifecycleChecks` 8件成功。通常Release出力は起動中LauncherMがロックしていたため、隔離出力で検証した。
 
 - 2026-09-13：Folder Opener実装後のDebug Buildと隔離出力先へのRelease Build成功、エラー0（Debugは既存警告14件）。`LaunchModelChecks` 19件成功。Explorer互換、空白・日本語Targetのquote、任意Application、検出失敗時のエラー、実環境VS Code検出、New Window引数、Opener JSON往復、Workspace一括起動経路を確認。実在する空白・日本語名フォルダをVS Codeの新規Windowで開き、Window titleから対象Folderを確認。実行中LauncherMが通常Release出力をロックしていたため同出力先への最終コピーと、Computer Useサービス未構成によるGUI操作は未確認。

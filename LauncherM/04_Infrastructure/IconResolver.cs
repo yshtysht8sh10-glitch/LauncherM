@@ -37,11 +37,19 @@ namespace LauncherM.Infrastructure
                 if (item.Type == LaunchItemType.Folder && !string.IsNullOrWhiteSpace(item.Opener))
                 {
                     string openerScheme;
-                    if (TryGetOpenerUriScheme(item, out openerScheme)) return ResolveUriScheme(openerScheme);
+                    if (TryGetOpenerUriScheme(item, out openerScheme))
+                    {
+                        BitmapSource schemeIcon = ResolveUriScheme(openerScheme);
+                        if (schemeIcon != null) return schemeIcon;
+                    }
                     string openerPath = null;
                     if (item.Opener.Equals("Visual Studio Code", StringComparison.OrdinalIgnoreCase) || item.Opener.Equals("VS Code", StringComparison.OrdinalIgnoreCase)) openerPath = ApplicationLocator.FindVisualStudioCode();
                     else if (item.Opener.Equals("Application", StringComparison.OrdinalIgnoreCase)) openerPath = Environment.ExpandEnvironmentVariables((item.OpenerPath ?? "").Trim().Trim('"'));
-                    if (!string.IsNullOrWhiteSpace(openerPath) && File.Exists(openerPath)) return GetShellIcon(openerPath, false, false);
+                    if (!string.IsNullOrWhiteSpace(openerPath) && File.Exists(openerPath))
+                    {
+                        BitmapSource openerIcon = GetShellIcon(openerPath, false, false);
+                        if (openerIcon != null) return openerIcon;
+                    }
                 }
 
                 string target = Environment.ExpandEnvironmentVariables((item.Target ?? "").Trim().Trim('"'));

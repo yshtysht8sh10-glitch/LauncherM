@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Windows.Media.Imaging;
 using LauncherM.Domain;
 using LauncherM.Infrastructure;
 
@@ -26,12 +27,19 @@ class IconResolverChecks
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Application, Target = exe }) != null, "Executable icon", ref checks);
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.File, Target = Path.GetTempFileName() }) != null, "File Shell icon", ref checks);
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath() }) != null, "Folder Shell icon", ref checks);
+            string code = ApplicationLocator.FindVisualStudioCode();
+            Check(code == null || string.Equals(Path.GetFileName(code), "Code.exe", StringComparison.OrdinalIgnoreCase), "VS Code locator returns executable, not PATH launcher (actual: " + code + ")", ref checks);
+            if (code != null)
+            {
+                BitmapSource folderIcon = resolver.Resolve(new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath(), Opener = "Explorer" });
+                BitmapSource codeIcon = resolver.Resolve(new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath(), Opener = "Visual Studio Code" });
+                Check(codeIcon != null && !SamePixels(folderIcon, codeIcon), "Folder VS Code uses Code.exe icon instead of Folder icon", ref checks);
+            }
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Folder, Target = "missing-folder", Opener = "Application", OpenerPath = exe }) != null, "Folder explicit opener icon priority", ref checks);
             var codexFolder = new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath(), Opener = "Codex", OpenerWindowMode = "New Thread" };
             string openerScheme;
             Check(IconResolver.TryGetOpenerUriScheme(codexFolder, out openerScheme) && openerScheme == "codex", "Folder Codex opener resolves scheme icon source", ref checks);
-            resolver.Resolve(codexFolder);
-            Check(true, "Folder Codex icon lookup safely falls back", ref checks);
+            Check(resolver.Resolve(codexFolder) != null, "Folder Codex icon lookup safely falls back to target when association icon is unavailable", ref checks);
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Application, Target = "unknown-launcherm-scheme:value" }) == null, "Unknown scheme fallback", ref checks);
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Application, Target = "invalid target that does not exist" }) == null, "Invalid target fallback", ref checks);
 
@@ -47,6 +55,28 @@ class IconResolverChecks
             var web = new LaunchItem { Type = LaunchItemType.Url, Target = "https://chatgpt.com/", IconPath = favicon ?? "" };
             Check(favicon == null || resolver.Resolve(web) != null, "Web favicon integration", ref checks);
 
+            string roundtripFolder = Path.Combine(Path.GetTempPath(), "LauncherM-IconResolver-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(roundtripFolder);
+            try
+            {
+                var document = new WorkspaceDocument();
+                var workspace = new Workspace { Name = "icons" };
+                workspace.LaunchItems.Add(new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath(), Opener = "Visual Studio Code" });
+                workspace.LaunchItems.Add(new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath(), Opener = "Explorer" });
+                workspace.LaunchItems.Add(new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath(), Opener = "Codex" });
+                workspace.LaunchItems.Add(new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath(), Opener = "Visual Studio Code", IconPath = explicitImage });
+                document.Workspaces.Add(workspace);
+                var repository = new WorkspaceRepository(Path.Combine(roundtripFolder, "workspaces.json"));
+                repository.Save(document);
+                Workspace restored = repository.LoadOrMigrate(Path.Combine(roundtripFolder, "missing-de.txt")).Workspaces[0];
+                var restartedResolver = new IconResolver(new WebsiteIconCache());
+                Check(code == null || !SamePixels(restartedResolver.Resolve(restored.LaunchItems[0]), restartedResolver.Resolve(restored.LaunchItems[1])), "VS Code icon survives save and restart-style reload", ref checks);
+                Check(restartedResolver.Resolve(restored.LaunchItems[1]) != null, "Explorer Folder icon survives save and restart-style reload", ref checks);
+                Check(restartedResolver.Resolve(restored.LaunchItems[2]) != null, "Codex icon or safe Folder fallback survives save and restart-style reload", ref checks);
+                Check(SamePixels(restartedResolver.Resolve(restored.LaunchItems[3]), restartedResolver.Resolve(new LaunchItem { IconPath = explicitImage })), "Explicit icon remains highest priority after reload", ref checks);
+            }
+            finally { Directory.Delete(roundtripFolder, true); }
+
             Console.WriteLine(checks + " checks passed.");
             return 0;
         }
@@ -58,5 +88,18 @@ class IconResolverChecks
         if (!condition) throw new Exception(name + " failed.");
         checks++;
         Console.WriteLine("PASS " + name);
+    }
+
+    private static bool SamePixels(BitmapSource left, BitmapSource right)
+    {
+        if (left == null || right == null || left.PixelWidth != right.PixelWidth || left.PixelHeight != right.PixelHeight || left.Format != right.Format) return false;
+        int stride = (left.PixelWidth * left.Format.BitsPerPixel + 7) / 8;
+        byte[] leftPixels = new byte[stride * left.PixelHeight];
+        byte[] rightPixels = new byte[stride * right.PixelHeight];
+        left.CopyPixels(leftPixels, stride, 0);
+        right.CopyPixels(rightPixels, stride, 0);
+        if (leftPixels.Length != rightPixels.Length) return false;
+        for (int i = 0; i < leftPixels.Length; i++) if (leftPixels[i] != rightPixels[i]) return false;
+        return true;
     }
 }
