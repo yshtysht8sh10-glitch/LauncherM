@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Win32;
 using LauncherM.Domain;
+using LauncherM.Infrastructure;
 
 namespace LauncherM.Application
 {
@@ -20,12 +21,31 @@ namespace LauncherM.Application
         {
             if (item == null || string.IsNullOrWhiteSpace(item.Target)) throw new InvalidOperationException("Targetが未設定です。");
             ProcessStartInfo psi;
-            if (item.Type == LaunchItemType.Folder) psi = new ProcessStartInfo("explorer.exe", Quote(item.Target));
+            if (item.Type == LaunchItemType.Folder) psi = CreateFolderStartInfo(item);
             else if (item.Type == LaunchItemType.Url) psi = CreateUrlStartInfo(item);
             else if (item.Type == LaunchItemType.File) psi = new ProcessStartInfo(item.Target) { UseShellExecute = true };
             else if (item.Type == LaunchItemType.Command) psi = new ProcessStartInfo("cmd.exe", "/k " + item.Target + (string.IsNullOrWhiteSpace(item.Arguments) ? "" : " " + item.Arguments));
             else psi = new ProcessStartInfo(item.Target, item.Arguments ?? "") { WorkingDirectory = item.WorkingDirectory ?? "" };
             return start(psi);
+        }
+        private static ProcessStartInfo CreateFolderStartInfo(LaunchItem item)
+        {
+            string opener = string.IsNullOrWhiteSpace(item.Opener) ? "Explorer" : item.Opener.Trim();
+            if (opener.Equals("Explorer", StringComparison.OrdinalIgnoreCase)) return new ProcessStartInfo("explorer.exe", Quote(item.Target));
+            if (opener.Equals("Default", StringComparison.OrdinalIgnoreCase)) return new ProcessStartInfo(item.Target) { UseShellExecute = true };
+            string executable;
+            bool isVisualStudioCode = opener.Equals("Visual Studio Code", StringComparison.OrdinalIgnoreCase) || opener.Equals("VS Code", StringComparison.OrdinalIgnoreCase);
+            if (isVisualStudioCode)
+                executable = ApplicationLocator.FindVisualStudioCode();
+            else if (opener.Equals("Application", StringComparison.OrdinalIgnoreCase))
+                executable = Environment.ExpandEnvironmentVariables((item.OpenerPath ?? "").Trim().Trim('"'));
+            else throw new InvalidOperationException("未対応のOpenerです: " + opener);
+            if (string.IsNullOrWhiteSpace(executable) || !File.Exists(executable))
+                throw new FileNotFoundException(opener + "が見つかりません。Opener設定を確認してください。", executable ?? opener);
+            string mode = item.OpenerWindowMode ?? "Default";
+            string option = isVisualStudioCode && mode.Equals("New Window", StringComparison.OrdinalIgnoreCase) ? "--new-window "
+                : isVisualStudioCode && mode.Equals("Reuse Window", StringComparison.OrdinalIgnoreCase) ? "--reuse-window " : "";
+            return new ProcessStartInfo(executable, option + Quote(item.Target));
         }
         private static ProcessStartInfo CreateUrlStartInfo(LaunchItem item)
         {

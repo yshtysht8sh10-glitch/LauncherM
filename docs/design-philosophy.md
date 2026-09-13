@@ -40,7 +40,7 @@ Workspaceは作業環境の単位であり、LaunchItemはその環境を構成�
 
 URLだからChrome、フォルダだからExplorerという固定関係を中核思想にしません。
 同じmemo.txtをNotepadでもVS Codeでも、同じURLをChromeでもEdgeでも開ける方向を目指します。
-現在はURLのBrowser選択のみが明示的なOpener選択であり、他の種類の任意Opener選択は未実装です。
+TargetTypeによってOpenerを固定しません。現在はURLのBrowser選択に加え、FolderをExplorer、Visual Studio Code、OS既定、任意Applicationで開くOpener選択を実装しています。
 
 ## 独立したContextとIdentity
 
@@ -72,7 +72,7 @@ Contextは必要な場合だけ表示し、未対応機能を操作可能に見�
 既存の灰色・ダークグレー・青アクセント、Header、歯車、LaunchItem一覧、右側詳細、Workspace選択、一括起動を維持します。操作経路が重複したHeaderボタンは、対応するタブ・ペイン操作へ集約します。
 保存互換性とTime to Usableを優先し、Generic Context Framework、Plugin System、DI全面導入、Dynamic Property System、JSON Schema駆動UI、Workflow Engineを先行実装しません。
 
-LaunchItemの表示アイコンはユーザーの明示指定を最優先し、未指定ならTargetとWindowsの関連付けから自然なアイコンを自動解決します。Web URLはfavicon、実行ファイル・通常ファイル・フォルダはWindows Shell、URI SchemeはWindows Protocol Associationから解決し、取得不能時はLauncherMの既定表示へ安全に戻します。
+LaunchItemの表示アイコンはユーザーの明示指定を最優先し、次に明示Opener、Target、LauncherM既定表示の順で自動解決します。Folder + VS Code / 任意ApplicationはOpenerの実行ファイル、通常のFolderはWindows Shellを使用します。Web URLは既存のfavicon優先を維持します。
 
 ## MVP Scope
 

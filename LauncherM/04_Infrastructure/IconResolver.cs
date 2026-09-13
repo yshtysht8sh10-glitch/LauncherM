@@ -34,6 +34,14 @@ namespace LauncherM.Infrastructure
                 BitmapSource explicitIcon = ResolveExplicitIcon(item.IconPath);
                 if (explicitIcon != null) return explicitIcon;
 
+                if (item.Type == LaunchItemType.Folder && !string.IsNullOrWhiteSpace(item.Opener))
+                {
+                    string openerPath = null;
+                    if (item.Opener.Equals("Visual Studio Code", StringComparison.OrdinalIgnoreCase) || item.Opener.Equals("VS Code", StringComparison.OrdinalIgnoreCase)) openerPath = ApplicationLocator.FindVisualStudioCode();
+                    else if (item.Opener.Equals("Application", StringComparison.OrdinalIgnoreCase)) openerPath = Environment.ExpandEnvironmentVariables((item.OpenerPath ?? "").Trim().Trim('"'));
+                    if (!string.IsNullOrWhiteSpace(openerPath) && File.Exists(openerPath)) return GetShellIcon(openerPath, false, false);
+                }
+
                 string target = Environment.ExpandEnvironmentVariables((item.Target ?? "").Trim().Trim('"'));
                 if (File.Exists(target)) return GetShellIcon(target, false, false);
                 if (Directory.Exists(target)) return GetShellIcon(target, true, false);

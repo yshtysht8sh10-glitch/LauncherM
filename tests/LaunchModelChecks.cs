@@ -21,6 +21,25 @@ class LaunchModelChecks
         Check(calls[2].FileName == @"D:\sample target" && calls[2].UseShellExecute, "File OS association");
         Check(calls[3].FileName == "https://example.com" && calls[3].UseShellExecute, "URL OS default");
         Check(calls[4].FileName == "cmd.exe" && calls[4].Arguments == @"/k D:\sample target --sample" && calls[4].WorkingDirectory == "", "Command existing lifetime and working directory limitation");
+        calls.Clear();
+        service.Launch(new LaunchItem { Name = "legacy folder", Type = LaunchItemType.Folder, Target = @"D:\space 日本語", Opener = null });
+        Check(calls[0].FileName == "explorer.exe" && calls[0].Arguments == "\"D:\\space 日本語\"", "Folder missing opener falls back to Explorer");
+        string testExecutable = typeof(LaunchModelChecks).Assembly.Location;
+        calls.Clear();
+        service.Launch(new LaunchItem { Name = "custom folder", Type = LaunchItemType.Folder, Target = @"D:\space 日本語", Opener = "Application", OpenerPath = testExecutable, OpenerWindowMode = "Default" });
+        Check(calls[0].FileName == testExecutable && calls[0].Arguments == "\"D:\\space 日本語\"", "Folder custom opener preserves quoted target");
+        string code = ApplicationLocator.FindVisualStudioCode();
+        if (code != null)
+        {
+            calls.Clear();
+            var codeWorkspace = new Workspace { Name = "Code" };
+            codeWorkspace.LaunchItems.Add(new LaunchItem { Name = "code folder", Type = LaunchItemType.Folder, Target = @"D:\space 日本語", Opener = "Visual Studio Code", OpenerWindowMode = "New Window" });
+            Check(service.LaunchWorkspace(codeWorkspace).Count == 0 && calls[0].FileName == code && calls[0].Arguments == "--new-window \"D:\\space 日本語\"", "Workspace VS Code detection and new-window arguments");
+        }
+        bool missingOpenerReported = false;
+        try { service.Launch(new LaunchItem { Name = "missing", Type = LaunchItemType.Folder, Target = @"D:\project", Opener = "Application", OpenerPath = @"Z:\missing\opener.exe" }); }
+        catch (FileNotFoundException ex) { missingOpenerReported = ex.Message.Contains("Opener設定"); }
+        Check(missingOpenerReported, "Missing opener reports a clear error");
         var folder = Path.Combine(Path.GetTempPath(), "LauncherM-model-" + Guid.NewGuid()); Directory.CreateDirectory(folder);
         var path = Path.Combine(folder, "workspaces.json"); var repo = new WorkspaceRepository(path);
         var doc = new WorkspaceDocument(); doc.Workspaces.Add(workspace); repo.Save(doc);
@@ -29,6 +48,10 @@ class LaunchModelChecks
             var before = workspace.LaunchItems[i]; var after = loaded.Workspaces[0].LaunchItems[i];
             Check(before.Id == after.Id && before.Type == after.Type && before.Target == after.Target && before.Arguments == after.Arguments && before.WorkingDirectory == after.WorkingDirectory, "restart roundtrip " + before.Type);
         }
+        var configuredFolder = new LaunchItem { Name = "code", Type = LaunchItemType.Folder, Target = @"D:\project", Opener = "Visual Studio Code", OpenerWindowMode = "Reuse Window" };
+        workspace.LaunchItems.Add(configuredFolder); repo.Save(doc);
+        var restoredFolder = repo.LoadOrMigrate("missing").Workspaces[0].LaunchItems[5];
+        Check(restoredFolder.Opener == "Visual Studio Code" && restoredFolder.OpenerWindowMode == "Reuse Window", "Folder opener JSON roundtrip");
         var legacy = Path.Combine(folder, "de.txt");
         File.WriteAllText(legacy, "2:0:D###ColonColonColon\\sample.exe:icon:visual:Legacy:memo");
         var bytes = File.ReadAllBytes(legacy);

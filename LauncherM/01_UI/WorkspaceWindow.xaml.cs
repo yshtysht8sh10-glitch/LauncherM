@@ -263,7 +263,7 @@ namespace LauncherM
         }
         private async void AddItem(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; LaunchItem item = ShowLaunchItemDialog(null); if (item == null) return; workspace.LaunchItems.Add(item); await EnsureWebsiteIcon(item); repository.Save(document); WorkspaceChanged(null, null); }
         private async void AddLink(object sender, RoutedEventArgs e) { Workspace workspace = workspaceBox.SelectedItem as Workspace; if (workspace == null) return; LaunchItem item = ShowLaunchItemDialog(null, LaunchItemType.Url); if (item == null) return; workspace.LaunchItems.Add(item); await EnsureWebsiteIcon(item); repository.Save(document); WorkspaceChanged(null, null); }
-        private async void EditItem(object sender, RoutedEventArgs e) { if (selectedItem == null) return; LaunchItem edited = ShowLaunchItemDialog(selectedItem); if (edited == null) return; selectedItem.Name = edited.Name; selectedItem.Type = edited.Type; selectedItem.Target = edited.Target; selectedItem.Arguments = edited.Arguments; selectedItem.WorkingDirectory = edited.WorkingDirectory; selectedItem.Browser = edited.Browser; selectedItem.BrowserProfile = edited.BrowserProfile; selectedItem.BrowserWindowGroup = edited.BrowserWindowGroup; selectedItem.IconPath = edited.IconPath; await EnsureWebsiteIcon(selectedItem); repository.Save(document); RenderItems(); }
+        private async void EditItem(object sender, RoutedEventArgs e) { if (selectedItem == null) return; LaunchItem edited = ShowLaunchItemDialog(selectedItem); if (edited == null) return; selectedItem.Name = edited.Name; selectedItem.Type = edited.Type; selectedItem.Target = edited.Target; selectedItem.Arguments = edited.Arguments; selectedItem.WorkingDirectory = edited.WorkingDirectory; selectedItem.Browser = edited.Browser; selectedItem.BrowserProfile = edited.BrowserProfile; selectedItem.BrowserWindowGroup = edited.BrowserWindowGroup; selectedItem.Opener = edited.Opener; selectedItem.OpenerPath = edited.OpenerPath; selectedItem.OpenerWindowMode = edited.OpenerWindowMode; selectedItem.IconPath = edited.IconPath; await EnsureWebsiteIcon(selectedItem); repository.Save(document); RenderItems(); }
         private LaunchItem ShowLaunchItemDialog(LaunchItem source, LaunchItemType? initialType = null)
         {
             Window dialog = new Window { Title = source == null ? "LaunchItemを追加" : "LaunchItemを編集", Width = 540, Height = 760, MaxHeight = SystemParameters.WorkArea.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner, Owner = this, Background = Background, Foreground = Foreground };
@@ -279,6 +279,15 @@ namespace LauncherM
             var browserPanel = new StackPanel(); panel.Children.Add(browserPanel);
             browserPanel.Children.Add(new TextBlock { Text = "ブラウザ（Default = OS既定）" });
             var browser = new ComboBox { ItemsSource = new[] { "Default", "Chrome", "Edge", "Firefox" }, SelectedItem = string.IsNullOrWhiteSpace(source?.Browser) ? "Default" : source.Browser, Margin = new Thickness(0, 2, 0, 8) }; browserPanel.Children.Add(browser);
+            var folderOpenerPanel = new StackPanel(); panel.Children.Add(folderOpenerPanel);
+            folderOpenerPanel.Children.Add(new TextBlock { Text = "開くアプリ" });
+            var folderOpener = new ComboBox { ItemsSource = new[] { "Explorer", "Visual Studio Code", "Default", "Application" }, SelectedItem = string.IsNullOrWhiteSpace(source?.Opener) ? "Explorer" : source.Opener, Margin = new Thickness(0, 2, 0, 8) }; folderOpenerPanel.Children.Add(folderOpener);
+            var openerPathPanel = new StackPanel(); panel.Children.Add(openerPathPanel);
+            openerPathPanel.Children.Add(new TextBlock { Text = "任意アプリの実行ファイル" });
+            var openerPathRow = new DockPanel { Margin = new Thickness(0, 2, 0, 8) };
+            var openerPathBrowse = new Button { Content = "参照…", Width = 75, Margin = new Thickness(6, 0, 0, 0) }; DockPanel.SetDock(openerPathBrowse, Dock.Right); openerPathRow.Children.Add(openerPathBrowse);
+            var openerPath = new TextBox { Text = source?.OpenerPath ?? "", Margin = new Thickness(0) }; openerPathRow.Children.Add(openerPath); openerPathPanel.Children.Add(openerPathRow);
+            openerPathBrowse.Click += (s, e) => { using (var picker = new System.Windows.Forms.OpenFileDialog { Title = "Openerに使用するアプリを選択", Filter = "実行ファイル|*.exe|すべてのファイル|*.*" }) if (picker.ShowDialog() == System.Windows.Forms.DialogResult.OK) openerPath.Text = picker.FileName; };
             var urlPanel = new StackPanel(); panel.Children.Add(urlPanel);
             urlPanel.Children.Add(new TextBlock { Text = "ブラウザプロファイル（Opener Context）" });
             var profile = new ComboBox { IsEditable = true, DisplayMemberPath = "Label", Margin = new Thickness(0, 2, 0, 8) }; urlPanel.Children.Add(profile);
@@ -308,22 +317,31 @@ namespace LauncherM
             if (ownerWorkspace != null) foreach (var member in ownerWorkspace.LaunchItems)
                 if (!string.IsNullOrWhiteSpace(member.BrowserWindowGroup) && !windowGroup.Items.Contains(member.BrowserWindowGroup)) windowGroup.Items.Add(member.BrowserWindowGroup);
             windowGroup.Text = source?.BrowserWindowGroup ?? ""; destinationPanel.Children.Add(windowGroup);
+            var codeWindowPanel = new StackPanel(); panel.Children.Add(codeWindowPanel);
+            codeWindowPanel.Children.Add(new TextBlock { Text = "VS Code Window" });
+            var codeWindow = new ComboBox { ItemsSource = new[] { "Default", "New Window", "Reuse Window" }, SelectedItem = string.IsNullOrWhiteSpace(source?.OpenerWindowMode) ? "Default" : source.OpenerWindowMode, Margin = new Thickness(0, 2, 0, 8) }; codeWindowPanel.Children.Add(codeWindow);
             var hint = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) }; panel.Children.Add(hint);
             Action updateUrlFields = () => {
                 var selectedType = (LaunchItemType)type.SelectedItem;
                 bool visible = selectedType == LaunchItemType.Url;
+                bool folder = selectedType == LaunchItemType.Folder;
                 string selectedBrowser = browser.SelectedItem as string;
+                string selectedFolderOpener = folderOpener.SelectedItem as string;
                 bool grouped = visible && (selectedBrowser == "Chrome" || selectedBrowser == "Edge");
                 browserPanel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+                folderOpenerPanel.Visibility = folder ? Visibility.Visible : Visibility.Collapsed;
+                openerPathPanel.Visibility = folder && selectedFolderOpener == "Application" ? Visibility.Visible : Visibility.Collapsed;
+                codeWindowPanel.Visibility = folder && selectedFolderOpener == "Visual Studio Code" ? Visibility.Visible : Visibility.Collapsed;
                 urlPanel.Visibility = visible && selectedBrowser != "Default" ? Visibility.Visible : Visibility.Collapsed;
                 destinationPanel.Visibility = grouped ? Visibility.Visible : Visibility.Collapsed;
                 executionPanel.Visibility = selectedType == LaunchItemType.Application || selectedType == LaunchItemType.Command ? Visibility.Visible : Visibility.Collapsed;
                 workingPanel.Visibility = selectedType == LaunchItemType.Application ? Visibility.Visible : Visibility.Collapsed;
-                openerHint.Text = OpenerLabel(selectedType, selectedBrowser);
-                hint.Text = grouped ? "一括起動時、同じブラウザ・プロファイル・グループのURLを新しいウィンドウのタブにまとめます。空欄と個別起動はブラウザ任せです。既存ウィンドウの指定ではありません。" : "配置先はOS / アプリに任せます。この種類の配置先指定は未対応です。";
+                openerHint.Text = OpenerLabel(selectedType, selectedBrowser, selectedFolderOpener);
+                hint.Text = grouped ? "一括起動時、同じブラウザ・プロファイル・グループのURLを新しいウィンドウのタブにまとめます。空欄と個別起動はブラウザ任せです。既存ウィンドウの指定ではありません。" : folder && selectedFolderOpener == "Visual Studio Code" ? "Default / New Window / Reuse WindowをVS Codeの起動オプションとして指定できます。" : "配置先はOS / アプリに任せます。この種類の配置先指定は未対応です。";
             };
             browser.SelectionChanged += (s, e) => { loadProfiles(""); updateUrlFields(); };
             type.SelectionChanged += (s, e) => updateUrlFields();
+            folderOpener.SelectionChanged += (s, e) => updateUrlFields();
             loadProfiles(source?.BrowserProfile); updateUrlFields();
             AddDialogSection(panel, "表示設定");
             panel.Children.Add(new TextBlock { Text = "アイコン（空欄なら自動取得）" });
@@ -332,19 +350,19 @@ namespace LauncherM
             DockPanel.SetDock(iconBrowse, Dock.Right); iconRow.Children.Add(iconBrowse);
             var iconPath = new TextBox { Text = source?.IconPath ?? "", Margin = new Thickness(0) }; iconRow.Children.Add(iconPath); panel.Children.Add(iconRow);
             iconBrowse.Click += (s, e) => { using (var picker = new System.Windows.Forms.OpenFileDialog { Title = "アイコンに使用するファイルを選択", Filter = "アイコン・画像・実行ファイル|*.ico;*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.exe;*.lnk|すべてのファイル|*.*" }) if (picker.ShowDialog() == System.Windows.Forms.DialogResult.OK) iconPath.Text = picker.FileName; };
-            StackPanel buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right }; Button ok = new Button { Content = "OK", Width = 75, IsDefault = true }; Button cancel = new Button { Content = "キャンセル", Width = 90, IsCancel = true, Margin = new Thickness(8, 0, 0, 0) }; buttons.Children.Add(ok); buttons.Children.Add(cancel); panel.Children.Add(buttons); dialog.Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }; ok.Click += (s, e) => { if (string.IsNullOrWhiteSpace(name.Text) || string.IsNullOrWhiteSpace(target.Text)) { MessageBox.Show("名前とTargetを入力してください。", "入力確認"); return; } if ((LaunchItemType)type.SelectedItem == LaunchItemType.Url && !Uri.IsWellFormedUriString(target.Text.Trim(), UriKind.Absolute)) { MessageBox.Show("有効なURLを入力してください。", "入力確認"); return; } if (!string.IsNullOrWhiteSpace(iconPath.Text) && !File.Exists(iconPath.Text.Trim())) { MessageBox.Show("指定したアイコンファイルが見つかりません。", "入力確認"); return; } dialog.DialogResult = true; }; if (dialog.ShowDialog() != true) return null; string savedIcon = iconPath.Text.Trim(); if (source != null && websiteIcons.IsManagedPath(savedIcon) && !string.Equals(source.Target, target.Text.Trim(), StringComparison.OrdinalIgnoreCase)) savedIcon = ""; return new LaunchItem { Id = source == null ? Guid.NewGuid() : source.Id, Name = name.Text.Trim(), Type = (LaunchItemType)type.SelectedItem, Target = target.Text.Trim(), Arguments = arguments.Text.Trim(), WorkingDirectory = source == null ? "" : source.WorkingDirectory, Browser = browser.SelectedItem == null ? "Default" : browser.SelectedItem.ToString(), BrowserProfile = profileId(), BrowserWindowGroup = windowGroup.Text.Trim(), IconPath = savedIcon };
+            StackPanel buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right }; Button ok = new Button { Content = "OK", Width = 75, IsDefault = true }; Button cancel = new Button { Content = "キャンセル", Width = 90, IsCancel = true, Margin = new Thickness(8, 0, 0, 0) }; buttons.Children.Add(ok); buttons.Children.Add(cancel); panel.Children.Add(buttons); dialog.Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }; ok.Click += (s, e) => { if (string.IsNullOrWhiteSpace(name.Text) || string.IsNullOrWhiteSpace(target.Text)) { MessageBox.Show("名前とTargetを入力してください。", "入力確認"); return; } if ((LaunchItemType)type.SelectedItem == LaunchItemType.Url && !Uri.IsWellFormedUriString(target.Text.Trim(), UriKind.Absolute)) { MessageBox.Show("有効なURLを入力してください。", "入力確認"); return; } if ((LaunchItemType)type.SelectedItem == LaunchItemType.Folder && (folderOpener.SelectedItem as string) == "Application" && (string.IsNullOrWhiteSpace(openerPath.Text) || !File.Exists(Environment.ExpandEnvironmentVariables(openerPath.Text.Trim().Trim('"'))))) { MessageBox.Show("任意アプリの実行ファイルが見つかりません。", "入力確認"); return; } if (!string.IsNullOrWhiteSpace(iconPath.Text) && !File.Exists(iconPath.Text.Trim())) { MessageBox.Show("指定したアイコンファイルが見つかりません。", "入力確認"); return; } dialog.DialogResult = true; }; if (dialog.ShowDialog() != true) return null; string savedIcon = iconPath.Text.Trim(); if (source != null && websiteIcons.IsManagedPath(savedIcon) && !string.Equals(source.Target, target.Text.Trim(), StringComparison.OrdinalIgnoreCase)) savedIcon = ""; return new LaunchItem { Id = source == null ? Guid.NewGuid() : source.Id, Name = name.Text.Trim(), Type = (LaunchItemType)type.SelectedItem, Target = target.Text.Trim(), Arguments = arguments.Text.Trim(), WorkingDirectory = source == null ? "" : source.WorkingDirectory, Browser = browser.SelectedItem == null ? "Default" : browser.SelectedItem.ToString(), BrowserProfile = profileId(), BrowserWindowGroup = windowGroup.Text.Trim(), Opener = (LaunchItemType)type.SelectedItem == LaunchItemType.Folder ? folderOpener.SelectedItem as string : source?.Opener, OpenerPath = openerPath.Text.Trim(), OpenerWindowMode = codeWindow.SelectedItem as string ?? "Default", IconPath = savedIcon };
         }
         private static void AddDialogSection(StackPanel panel, string title)
         {
             panel.Children.Add(new Separator { Margin = new Thickness(0, 10, 0, 10) });
             panel.Children.Add(new TextBlock { Text = title, FontSize = 18, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(Color.FromRgb(101, 181, 255)), Margin = new Thickness(0, 0, 0, 8) });
         }
-        private static string OpenerLabel(LaunchItemType type, string browser)
+        private static string OpenerLabel(LaunchItemType type, string browser, string opener = null)
         {
             switch (type)
             {
                 case LaunchItemType.Url: return string.IsNullOrWhiteSpace(browser) || browser == "Default" ? "OS既定のブラウザ" : browser;
-                case LaunchItemType.Folder: return "Explorer";
+                case LaunchItemType.Folder: return string.IsNullOrWhiteSpace(opener) ? "Explorer" : opener;
                 case LaunchItemType.File: return "OS既定の関連付けアプリ";
                 case LaunchItemType.Command: return "cmd.exe /k（終了後もコンソールを維持）";
                 default: return "対象のアプリを直接実行";
@@ -358,7 +376,7 @@ namespace LauncherM
             detailName.Text = item.Name; detailMemo.Text = "作業環境を構成する1つのLaunchItem";
             detailIcon.Source = GetItemIcon(item);
             typeText.Text = item.Type.ToString(); targetText.Text = item.Target;
-            openerText.Text = OpenerLabel(item.Type, item.Browser);
+            openerText.Text = OpenerLabel(item.Type, item.Browser, item.Opener);
             bool url = item.Type == LaunchItemType.Url;
             bool explicitBrowser = url && !string.IsNullOrWhiteSpace(item.Browser) && !string.Equals(item.Browser, "Default", StringComparison.OrdinalIgnoreCase);
             bool grouped = url && (string.Equals(item.Browser, "Chrome", StringComparison.OrdinalIgnoreCase) || string.Equals(item.Browser, "Edge", StringComparison.OrdinalIgnoreCase));
@@ -370,7 +388,9 @@ namespace LauncherM
             workingDirectoryText.Text = string.IsNullOrWhiteSpace(item.WorkingDirectory) ? "未指定" : item.WorkingDirectory;
             groupDetails.Visibility = grouped ? Visibility.Visible : Visibility.Collapsed;
             groupText.Text = string.IsNullOrWhiteSpace(item.BrowserWindowGroup) ? "未指定" : item.BrowserWindowGroup;
-            destinationText.Text = grouped && !string.IsNullOrWhiteSpace(item.BrowserWindowGroup)
+            destinationText.Text = item.Type == LaunchItemType.Folder && (string.Equals(item.Opener, "Visual Studio Code", StringComparison.OrdinalIgnoreCase) || string.Equals(item.Opener, "VS Code", StringComparison.OrdinalIgnoreCase))
+                ? "VS Code Window: " + (string.IsNullOrWhiteSpace(item.OpenerWindowMode) ? "Default" : item.OpenerWindowMode)
+                : grouped && !string.IsNullOrWhiteSpace(item.BrowserWindowGroup)
                 ? "ブラウザウィンドウ：一括起動時に同じブラウザ・プロファイル・グループを新しいウィンドウのタブにまとめます。個別起動はブラウザ任せです。"
                 : "OS / アプリに任せる（配置指定なし）";
         }

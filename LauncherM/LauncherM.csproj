@@ -38,6 +38,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="04_Infrastructure\BrowserProfiles.cs" />
+    <Compile Include="04_Infrastructure\ApplicationLocator.cs" />
     <Compile Include="04_Infrastructure\WebsiteIconCache.cs" />
     <Compile Include="04_Infrastructure\IconResolver.cs" />
     <Compile Include="04_Infrastructure\LauncherShortcutService.cs" />

@@ -26,6 +26,7 @@ class IconResolverChecks
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Application, Target = exe }) != null, "Executable icon", ref checks);
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.File, Target = Path.GetTempFileName() }) != null, "File Shell icon", ref checks);
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Folder, Target = Path.GetTempPath() }) != null, "Folder Shell icon", ref checks);
+            Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Folder, Target = "missing-folder", Opener = "Application", OpenerPath = exe }) != null, "Folder explicit opener icon priority", ref checks);
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Application, Target = "unknown-launcherm-scheme:value" }) == null, "Unknown scheme fallback", ref checks);
             Check(resolver.Resolve(new LaunchItem { Type = LaunchItemType.Application, Target = "invalid target that does not exist" }) == null, "Invalid target fallback", ref checks);
 

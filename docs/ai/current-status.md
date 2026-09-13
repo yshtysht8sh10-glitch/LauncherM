@@ -1,6 +1,6 @@
 # Current Status
 
-Last updated: 2026-09-11
+Last updated: 2026-09-13
 
 ## Implemented
 
@@ -14,6 +14,8 @@ Last updated: 2026-09-11
 - 両Registry ViewのApp Pathsと64/32-bitインストールパスによるブラウザ検出。
 - URL favicon取得・LocalApplicationDataへのキャッシュ、手動IconPath、画像表示。favicon.ico取得失敗時はGoogle favicon serviceへフォールバックする既存動作。
 - LaunchItemの汎用アイコン自動解決。明示IconPathを最優先し、exe／通常ファイル／フォルダはWindows Shell、HTTP(S)は既存favicon、URI SchemeはWindows Protocol AssociationのUserChoice／Scheme登録から`DefaultIcon`またはopen commandのexeを静的に解決。Scheme結果はメモリキャッシュし、失敗時は既定表示へフォールバック。
+- FolderのTargetとOpenerを分離。Explorer / Visual Studio Code / OS既定 / 任意Applicationを選択・保存し、VS CodeはDefault / New Window / Reuse Windowを指定可能。既存のOpener未指定FolderはExplorerへフォールバック。
+- VS CodeをPATH、Windows App Paths、User / System Installerの標準配置から検出。明示IconPathがないFolder + VS Code / 任意ApplicationではOpener実行ファイルのアイコンをTargetより優先。
 - 今回：詳細ペイン・編集ダイアログを「何を開く？ / Target」「何で開く？ / Opener」「どこに開く？ / Destination」に整理。Browser ProfileとWindow Groupを分離し、選択内容による条件表示を実装。
 - 今回：灰色Header・歯車・青ブロック・ダークな左右ペイン・Workspace選択・すべて起動を維持。編集ダイアログにも既存の配色を適用しスクロール可能にした。
 - 今回：Workspace ComboBoxと同じ選択状態を使う横スクロール可能なWorkspaceタブ。相互切替時に選択表示を同期。
@@ -49,7 +51,7 @@ Last updated: 2026-09-11
 
 ## Planned（未実装・次期検討対象、時期未確定）
 
-- URL以外の任意Opener選択。
+- File / URLを含む全Targetの汎用Opener拡張（Folderは実装済み）。
 - Explorer Tab destination。
 - Monitor / 座標指定。
 
@@ -63,6 +65,8 @@ Last updated: 2026-09-11
 Plugin System、Generic Context Framework、Workflow Engineは導入していません。
 
 ## Verified
+
+- 2026-09-13：Folder Opener実装後のDebug Buildと隔離出力先へのRelease Build成功、エラー0（Debugは既存警告14件）。`LaunchModelChecks` 19件成功。Explorer互換、空白・日本語Targetのquote、任意Application、検出失敗時のエラー、実環境VS Code検出、New Window引数、Opener JSON往復、Workspace一括起動経路を確認。実在する空白・日本語名フォルダをVS Codeの新規Windowで開き、Window titleから対象Folderを確認。実行中LauncherMが通常Release出力をロックしていたため同出力先への最終コピーと、Computer Useサービス未構成によるGUI操作は未確認。
 
 - 2026-09-11：汎用IconResolver実装後のDebug / Release Build成功、エラー0（各ビルド既存警告14件）。専用チェック12件成功。exe、通常ファイル、フォルダ、明示アイコン優先、HTTPS favicon、未知Scheme／無効TargetのFallback、quoted commandとDefaultIcon解析を確認。このPCの実際の`onenote` Protocol登録からOneNoteアイコンを取得でき、解決処理がURIを起動しないことをコード確認。隔離した作業ディレクトリでRelease版WPFプロセスの起動継続も確認（画面の目視操作は未確認）。
 
@@ -113,9 +117,9 @@ Plugin System、Generic Context Framework、Workflow Engineは導入していま
 ## Known Issues / 実装制約
 
 - WorkingDirectoryはApplicationだけに適用。Commandその他の種類で有効と解釈しない。GUIからの編集も未対応。
-- Fileの任意エディタ選択、Folderの任意Opener、既存Browser WindowへのTab配置は未実装。
+- Fileの任意エディタ選択、URLのBrowser以外の任意Opener、既存Browser WindowへのTab配置は未実装。
 - Window Groupは起動時CLIで、ブラウザの設定やポリシーによる結果まで保証しない。
-- Workspace CloseはApplication / Commandだけが対象。Browser / Explorer / Fileは共有プロセスや既存Windowを巻き込む危険があるため閉じない。LauncherM再起動後はセッション追跡を復元しない。
+- Workspace CloseはApplication / Commandだけが対象。Browser / Explorer / VS Codeを含むFolder / Fileは共有プロセスや既存Windowを巻き込む危険があるため閉じない。LauncherM再起動後はセッション追跡を復元しない。
 - Applicationが単一インスタンスへ処理を引き渡して起動Processが直ちに終了した場合、その既存インスタンスは閉じない。強制終了時の未保存データ保護は各アプリの通常終了応答に依存する。
 - 非標準user-data root、portable版、削除済みProfile等の自動管理は未対応。
 - Microsoft Store / Packaged Appの間接リソース（`@{...}`等）からのアイコン抽出は未対応。Protocol登録から通常のDefaultIconまたはexeを得られない場合は既定表示へフォールバックする。
