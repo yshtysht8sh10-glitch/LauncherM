@@ -8,11 +8,13 @@ using System.Windows.Media.Imaging;
 using System.Collections.Generic;
 using System.Windows.Input;
 using System.Threading.Tasks;
+using System.Threading;
 using System.ComponentModel;
 using System.Windows.Documents;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Data;
+using System.Windows.Threading;
 using LauncherM.Application;
 using LauncherM.Domain;
 using LauncherM.Infrastructure;
@@ -355,8 +357,64 @@ namespace LauncherM
             DockPanel.SetDock(iconBrowse, Dock.Right); iconRow.Children.Add(iconBrowse);
             var iconPath = new TextBox { Text = source?.IconPath ?? "", Margin = new Thickness(0) }; iconRow.Children.Add(iconPath); panel.Children.Add(iconRow);
             bool iconPathIsAutomatic = iconResolver.IsAutomaticIconPath(source);
-            iconPath.TextChanged += (s, e) => iconPathIsAutomatic = false;
+            bool applyingAutomaticIcon = false;
+            iconPath.TextChanged += (s, e) => { if (!applyingAutomaticIcon) iconPathIsAutomatic = false; };
             iconBrowse.Click += (s, e) => { using (var picker = new System.Windows.Forms.OpenFileDialog { Title = "アイコンに使用するファイルを選択", Filter = "アイコン・画像・実行ファイル|*.ico;*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.exe;*.lnk|すべてのファイル|*.*" }) if (picker.ShowDialog() == System.Windows.Forms.DialogResult.OK) { iconPathIsAutomatic = false; iconPath.Text = picker.FileName; } };
+            bool applyingAutomaticName = false;
+            bool nameWasEditedByUser = source != null || !string.IsNullOrWhiteSpace(name.Text);
+            name.TextChanged += (s, e) => { if (!applyingAutomaticName) nameWasEditedByUser = true; };
+            int metadataRequestVersion = 0;
+            CancellationTokenSource metadataCancellation = null;
+            var metadataDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(650) };
+            metadataDebounce.Tick += async (s, e) =>
+            {
+                metadataDebounce.Stop();
+                int requestVersion = metadataRequestVersion;
+                string requestedTarget = target.Text.Trim();
+                if ((LaunchItemType)type.SelectedItem != LaunchItemType.Url || !Uri.TryCreate(requestedTarget, UriKind.Absolute, out Uri requestedUri)
+                    || (requestedUri.Scheme != Uri.UriSchemeHttp && requestedUri.Scheme != Uri.UriSchemeHttps)) return;
+                metadataCancellation?.Cancel();
+                metadataCancellation?.Dispose();
+                metadataCancellation = new CancellationTokenSource();
+                CancellationToken token = metadataCancellation.Token;
+                Task<string> titleTask = itemNameResolver.ResolveWebTitleAsync(requestedTarget, token);
+                Task<string> iconTask = Task.Run(() => websiteIcons.GetOrDownload(requestedTarget), token);
+                string resolvedTitle;
+                try
+                {
+                    resolvedTitle = await titleTask;
+                }
+                catch (OperationCanceledException) { return; }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException) { return; }
+                if (token.IsCancellationRequested || requestVersion != metadataRequestVersion || !string.Equals(requestedTarget, target.Text.Trim(), StringComparison.Ordinal)) return;
+                if (!nameWasEditedByUser)
+                {
+                    var candidate = new LaunchItem { Type = LaunchItemType.Url, Target = requestedTarget, Browser = browser.SelectedItem as string };
+                    applyingAutomaticName = true;
+                    name.Text = string.IsNullOrWhiteSpace(resolvedTitle) ? itemNameResolver.Resolve(candidate) : resolvedTitle;
+                    applyingAutomaticName = false;
+                }
+                string resolvedIcon;
+                try { resolvedIcon = await iconTask; }
+                catch (OperationCanceledException) { return; }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException) { return; }
+                if (token.IsCancellationRequested || requestVersion != metadataRequestVersion || !string.Equals(requestedTarget, target.Text.Trim(), StringComparison.Ordinal)) return;
+                if (!string.IsNullOrWhiteSpace(resolvedIcon) && (string.IsNullOrWhiteSpace(iconPath.Text) || iconPathIsAutomatic))
+                {
+                    applyingAutomaticIcon = true;
+                    iconPath.Text = resolvedIcon;
+                    applyingAutomaticIcon = false;
+                    iconPathIsAutomatic = true;
+                }
+            };
+            target.TextChanged += (s, e) =>
+            {
+                metadataRequestVersion++;
+                metadataCancellation?.Cancel();
+                metadataDebounce.Stop();
+                if ((LaunchItemType)type.SelectedItem == LaunchItemType.Url) metadataDebounce.Start();
+            };
+            dialog.Closed += (s, e) => { metadataDebounce.Stop(); metadataCancellation?.Cancel(); metadataCancellation?.Dispose(); };
             StackPanel buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
             Button ok = new Button { Content = "OK", Width = 75, IsDefault = true };
             Button cancel = new Button { Content = "キャンセル", Width = 90, IsCancel = true, Margin = new Thickness(8, 0, 0, 0) };

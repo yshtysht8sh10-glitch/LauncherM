@@ -10,7 +10,7 @@
 - `04_Infrastructure/WorkspaceRepository.cs`：DataContractJsonSerializerで作業ディレクトリの`workspaces.json`を読み書き。Version = 1。
 - `BrowserProfiles.cs`：標準Local Stateのprofile.info_cacheから表示名とDirectoryのみを読み、Chrome/Edgeの候補を表示。手入力も可能。FirefoxはProfile名。
 - `WebsiteIconCache.cs`：URL faviconの取得・ローカルキャッシュ。IconPathは自動取得したfaviconと手動指定の双方に使用。
-- `LaunchItemNameResolver.cs`：保存時にNameが空欄の場合だけ、Folder末尾名、拡張子付きFile名、exeのFileDescription / ProductName、URI path segment、Web hostnameの順でTarget主体の表示名を解決し、Opener、`LaunchItem`へフォールバックする。名前取得専用のネットワークアクセスは行わない。
+- `LaunchItemNameResolver.cs`：Nameが空欄の場合に、Folder末尾名、拡張子付きFile名、exeのFileDescription / ProductName、URI path segment、Web hostnameの順でTarget主体の表示名を解決し、Opener、`LaunchItem`へフォールバックする。Web URL向けにはキャンセル可能な非同期HTML title取得も提供する。
 - `IconResolver.cs`：LaunchItemの表示アイコンを一元解決。手動IconPath、専用Opener、Target、TargetType fallbackの順に解決する。実在ファイル／exeとフォルダはWindows Shell、HTTP(S)は既存faviconキャッシュ、その他の絶対URIはSchemeとしてWindows Protocol Associationを参照する。URI SchemeはUserChoiceのProgId、Scheme登録、AppModel RepositoryのURL関連付けとAppxManifestの順に調べ、Desktop / MSIX双方のアイコンを静的に取得する。解決のためにTargetを起動しない。
 - 旧`0010_MainWindow`、設定画面、de.txt / se.txt関連コードは残存。MUGEN固有処理は旧UI側に留め、汎用Coreへ移しません。
 
@@ -32,7 +32,7 @@ Workspaceは作業環境、LaunchItemはその構成要素。Target / Opener / D
 
 表示アイコンの解決順は、ユーザー明示IconPath、Folderの専用Opener、実在するTargetファイル／フォルダまたはHTTP(S) favicon、TargetType fallback。Folder + Codexはcodex SchemeのDesktop登録を先に参照し、取得できない場合はAppModel RepositoryのURL関連付けから該当MSIX packageを特定してAppxManifestのVisualElements logo（取得不可時はmanifestのExecutable）を使う。専用Openerを解決できない場合はTargetへ安全にフォールバックする。`IconPathIsAutomatic`で自動キャッシュと手動指定を区別し、旧データの管理下favicon pathも自動と推定する。Schemeごとの成功・失敗結果はプロセス内でキャッシュする。
 
-表示名は主にTarget（WHAT）、表示アイコンは主にOpener（WITH）を表す。編集ダイアログは既存Nameをそのまま維持し、空欄で保存した新規・既存項目にだけ名前解決を適用するため、既存JSONの読込だけではNameを変更しない。
+表示名は主にTarget（WHAT）、表示アイコンは主にOpener（WITH）を表す。新規Web URLのTarget変更は650ms debounce後にHTML titleと既存WebsiteIconCacheのfavicon取得を非同期で並行実行し、保存前のName / Icon欄へ反映する。世代番号とCancellationTokenで古いURLの結果を破棄し、ユーザーが編集したName / Iconは上書きしない。既存項目はダイアログを開いただけでは取得せず、既存JSONの読込だけでもNameを変更しない。保存時の空欄fallbackも維持する。
 
 ApplicationはTarget自身を実行、FileはOS関連付け、Commandはcmd.exe /k。FolderはOpener未指定を含むExplorer、VS Code、OS既定、任意Applicationを切り替えます。
 Folder + Codexは`CodexOpener`がFolderの存在とcodex Scheme登録を確認し、`Uri.EscapeDataString`で絶対パスをエンコードして`codex://threads/new?path=...`を生成し、`UseShellExecute = true`でWindows Shellへ委譲します。
